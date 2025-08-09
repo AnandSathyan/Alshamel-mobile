@@ -295,27 +295,11 @@ To find your IP address:
 - Responsive images and optimized assets
 - Smooth animations with native drivers
 
-## 🔮 Future Enhancements
-
-- Push notifications for health reminders
-- Data export functionality
-- Integration with health devices
-- Social features and challenges
-- AI-powered health insights
-- Dark/light theme toggle
-- Offline data synchronization
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 
 ## 📞 Support
 
@@ -326,4 +310,4 @@ For support and questions:
 
 ---
 
-**Built with ❤️ using React Native CLI and modern development practices.**
+**CREATED BY ANAND C**
