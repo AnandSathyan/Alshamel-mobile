@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from "react-native-linear-gradient"
 import { Icon } from "../components/common/Icon"
 import { ProfessionalCard } from "../components/common/ProfessionalCard"
 import { ProfessionalHeader } from "../components/common/ProfessionalHeader"
@@ -128,6 +128,30 @@ const LogDataScreen: React.FC = () => {
     }
   }
 
+  // Helper function to handle suggestion selection with proper type conversion
+  const handleSuggestionPress = (
+    field: keyof HealthMetrics,
+    value: string,
+    type: "number" | "float" | "string" = "string",
+  ) => {
+    let convertedValue: any = value
+
+    switch (type) {
+      case "number":
+        convertedValue = Number.parseInt(value) || 0
+        break
+      case "float":
+        convertedValue = Number.parseFloat(value) || 0
+        break
+      case "string":
+      default:
+        convertedValue = value
+        break
+    }
+
+    updateField(field, convertedValue)
+  }
+
   const isLoading = createMutation.isPending || updateMutation.isPending
 
   const getMoodEmoji = (mood: number) => {
@@ -153,6 +177,7 @@ const LogDataScreen: React.FC = () => {
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Professional Header */}
           <ProfessionalHeader
@@ -225,7 +250,7 @@ const LogDataScreen: React.FC = () => {
                     icon="footsteps"
                     error={errors.steps}
                     suggestions={["5000", "7500", "10000", "12500", "15000"]}
-                    onSuggestionPress={(value) => updateField("steps", Number.parseInt(value))}
+                    onSuggestionPress={(value) => handleSuggestionPress("steps", value, "number")}
                   />
 
                   <AnimatedInput
@@ -237,7 +262,7 @@ const LogDataScreen: React.FC = () => {
                     suffix="kcal"
                     error={errors.calories}
                     suggestions={["1500", "1800", "2000", "2200", "2500"]}
-                    onSuggestionPress={(value) => updateField("calories", Number.parseInt(value))}
+                    onSuggestionPress={(value) => handleSuggestionPress("calories", value, "number")}
                   />
 
                   <AnimatedInput
@@ -246,7 +271,7 @@ const LogDataScreen: React.FC = () => {
                     onChangeText={(value) => updateField("exercise", value)}
                     icon="barbell"
                     suggestions={["30 min walk", "45 min jogging", "Gym workout", "Yoga session", "Swimming"]}
-                    onSuggestionPress={(value) => updateField("exercise", value)}
+                    onSuggestionPress={(value) => handleSuggestionPress("exercise", value, "string")}
                   />
                 </View>
               </ProfessionalCard>
@@ -275,7 +300,7 @@ const LogDataScreen: React.FC = () => {
                     suffix="BPM"
                     error={errors.heartRate}
                     suggestions={["60", "70", "80", "90", "100"]}
-                    onSuggestionPress={(value) => updateField("heartRate", Number.parseInt(value))}
+                    onSuggestionPress={(value) => handleSuggestionPress("heartRate", value, "number")}
                   />
 
                   <AnimatedInput
@@ -286,6 +311,8 @@ const LogDataScreen: React.FC = () => {
                     icon="fitness"
                     suffix="kg"
                     error={errors.weight}
+                    suggestions={["50", "60", "70", "80", "90"]}
+                    onSuggestionPress={(value) => handleSuggestionPress("weight", value, "float")}
                   />
 
                   {/* Blood Pressure */}
@@ -366,8 +393,8 @@ const LogDataScreen: React.FC = () => {
                     icon="water"
                     suffix="L"
                     error={errors.waterIntake}
-                    suggestions={["1.5", "2.0", "2.5", "3.0", "3.5"]}
-                    onSuggestionPress={(value) => updateField("waterIntake", Number.parseFloat(value))}
+                    suggestions={["0.5", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5"]}
+                    onSuggestionPress={(value) => handleSuggestionPress("waterIntake", value, "float")}
                   />
 
                   <AnimatedInput
@@ -378,8 +405,8 @@ const LogDataScreen: React.FC = () => {
                     icon="bed"
                     suffix="h"
                     error={errors.sleepDuration}
-                    suggestions={["6.0", "7.0", "7.5", "8.0", "8.5"]}
-                    onSuggestionPress={(value) => updateField("sleepDuration", Number.parseFloat(value))}
+                    suggestions={["5.0", "6.0", "7.0", "7.5", "8.0", "8.5", "9.0"]}
+                    onSuggestionPress={(value) => handleSuggestionPress("sleepDuration", value, "float")}
                   />
 
                   {/* Professional Mood Selector */}
@@ -393,6 +420,7 @@ const LogDataScreen: React.FC = () => {
                           key={mood}
                           style={[styles.moodButton, formData.mood === mood && styles.moodButtonActive]}
                           onPress={() => updateField("mood", mood)}
+                          activeOpacity={0.7}
                         >
                           <LinearGradient
                             colors={
@@ -453,7 +481,7 @@ const LogDataScreen: React.FC = () => {
               style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isLoading}
-              activeOpacity={0.95}
+              activeOpacity={0.8}
             >
               <LinearGradient
                 colors={isLoading ? colors.gradientDark : colors.gradientPrimary}
@@ -665,7 +693,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...dimensions.shadow.lg,
     shadowColor: colors.shadowPrimary,
-    
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -678,20 +705,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: dimensions.spacing.md,
-    paddingVertical: 20,
-    textAlign: "center",
-    marginBottom:20,
-    borderRadius: dimensions.borderRadius.md,
   },
   saveButtonText: {
-    // flex:1,
-    heigh:"100%",
     fontSize: dimensions.fontSize.bodyLarge,
     fontWeight: "700",
     color: colors.textPrimary,
-    textAlign: "center",
-    alignItems: "center",
-    justifyContent: "center",
   },
 })
 

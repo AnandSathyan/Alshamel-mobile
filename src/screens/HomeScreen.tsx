@@ -2,7 +2,7 @@
 import type React from "react"
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from "react-native-linear-gradient"
 import { Icon } from "../components/common/Icon"
 import { ProfessionalCard } from "../components/common/ProfessionalCard"
 import { ProfessionalMetricCard } from "../components/common/ProfessionalMetricCard"
@@ -18,9 +18,10 @@ import { BasicSummaryCard } from "../components/common/BasicSummaryCard"
 const { width } = Dimensions.get("window")
 
 const HomeScreen: React.FC = () => {
-  const { useTodaysLog, useAllLogs } = useHealthData()
+  const { useTodaysLog, useAllLogs, useWeeklyLogs } = useHealthData()
   const { data: todaysLog, isLoading, refetch, isRefetching } = useTodaysLog()
   const { data: allLogs } = useAllLogs()
+  const { data: weeklyLogs } = useWeeklyLogs()
   const navigation = useNavigation()
 
   const healthScore = allLogs ? calculateOverallHealthScore(allLogs) : null
@@ -38,6 +39,22 @@ const HomeScreen: React.FC = () => {
       month: "long",
       day: "numeric",
     })
+  }
+
+  // Calculate trends from actual data
+  const calculateTrend = (currentValue: number, metric: string) => {
+    if (!weeklyLogs || weeklyLogs.length < 2) return { trend: "neutral", value: "±0%" }
+
+    const sortedLogs = weeklyLogs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const previousValue = sortedLogs[sortedLogs.length - 2]?.[metric] || 0
+
+    if (previousValue === 0) return { trend: "neutral", value: "±0%" }
+
+    const change = ((currentValue - previousValue) / previousValue) * 100
+
+    if (change > 0) return { trend: "up", value: `+${Math.round(change)}%` }
+    if (change < 0) return { trend: "down", value: `${Math.round(change)}%` }
+    return { trend: "neutral", value: "±0%" }
   }
 
   if (isLoading) {
@@ -63,9 +80,9 @@ const HomeScreen: React.FC = () => {
       >
         {/* Professional Header */}
         <ProfessionalHeader
-          title={`${getGreeting()},`}
+          title={getGreeting()}
           subtitle="Let's achieve your wellness goals today"
-          notificationCount={3}
+          showNotifications={false}
           gradient={[colors.background, colors.backgroundSecondary, colors.surface]}
         />
 
@@ -74,7 +91,7 @@ const HomeScreen: React.FC = () => {
           <DateDisplay />
         </View>
 
-        {/* Health Score Dashboard */}
+        {/* Health Score Dashboard - Only show if we have data */}
         {healthScore && (
           <ProfessionalCard
             gradient={["#0F766E", "#14B8A6", "#22D3EE"]}
@@ -102,15 +119,7 @@ const HomeScreen: React.FC = () => {
                 <Text style={styles.scoreUnit}>%</Text>
               </View>
               <Text style={styles.scoreDate}>{formatDate(new Date())}</Text>
-              <Text style={styles.scoreTime}>Updated at 12:00 PM</Text>
-
-              {/* Mini visualization */}
-              <View style={styles.miniVisualization}>
-                <View style={styles.visualizationBar} />
-                <View style={[styles.visualizationBar, { height: 8, opacity: 0.7 }]} />
-                <View style={[styles.visualizationBar, { height: 12, opacity: 0.5 }]} />
-                <View style={[styles.visualizationBar, { height: 6, opacity: 0.3 }]} />
-              </View>
+              <Text style={styles.scoreTime}>Updated now</Text>
             </View>
           </ProfessionalCard>
         )}
@@ -119,33 +128,23 @@ const HomeScreen: React.FC = () => {
         <View style={styles.quickActionsSection}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            {[
-              {
-                icon: "add-circle",
-                label: "Log Data",
-                gradient: colors.gradientPrimary,
-                action: () => navigation.navigate("Log Data"),
-              },
-              {
-                icon: "analytics",
-                label: "View Stats",
-                gradient: colors.gradientInfo,
-                action: () => navigation.navigate("History"),
-              },
-              { icon: "medical", label: "AI Health", gradient: colors.gradientSecondary },
-              { icon: "fitness", label: "Workout", gradient: colors.gradientSuccess },
-            ].map((action, index) => (
-              <TouchableOpacity key={index} onPress={action.action} style={styles.quickActionButton}>
-                <LinearGradient colors={action.gradient} style={styles.quickActionGradient}>
-                  <Icon name={action.icon} size={24} color={colors.textPrimary} />
-                  <Text style={styles.quickActionLabel}>{action.label}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity onPress={() => navigation.navigate("Log Data")} style={styles.quickActionButton}>
+              <LinearGradient colors={colors.gradientPrimary} style={styles.quickActionGradient}>
+                <Icon name="add-circle" size={24} color={colors.textPrimary} />
+                <Text style={styles.quickActionLabel}>Log Data</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate("History")} style={styles.quickActionButton}>
+              <LinearGradient colors={colors.gradientInfo} style={styles.quickActionGradient}>
+                <Icon name="analytics" size={24} color={colors.textPrimary} />
+                <Text style={styles.quickActionLabel}>View Stats</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Today's Metrics */}
+        {/* Today's Metrics - Only show if we have data */}
         {todaysLog ? (
           <View style={styles.metricsSection}>
             <View style={styles.sectionHeader}>
@@ -169,9 +168,8 @@ const HomeScreen: React.FC = () => {
                 icon="footsteps"
                 gradient={colors.gradientSuccess}
                 target={10000}
-                trend="up"
-                trendValue="+12%"
-                glowEffect
+                trend={calculateTrend(todaysLog.steps, "steps").trend}
+                trendValue={calculateTrend(todaysLog.steps, "steps").value}
                 size="medium"
               />
 
@@ -182,8 +180,8 @@ const HomeScreen: React.FC = () => {
                 icon="water"
                 gradient={colors.gradientInfo}
                 target={2.5}
-                trend="up"
-                trendValue="+8%"
+                trend={calculateTrend(todaysLog.waterIntake, "waterIntake").trend}
+                trendValue={calculateTrend(todaysLog.waterIntake, "waterIntake").value}
                 size="medium"
               />
 
@@ -194,48 +192,54 @@ const HomeScreen: React.FC = () => {
                 icon="bed"
                 gradient={colors.gradientPrimary}
                 target={8}
-                trend="neutral"
-                trendValue="±0%"
+                trend={calculateTrend(todaysLog.sleepDuration, "sleepDuration").trend}
+                trendValue={calculateTrend(todaysLog.sleepDuration, "sleepDuration").value}
                 size="medium"
               />
 
-              <ProfessionalMetricCard
-                title="Heart Rate"
-                value={todaysLog.heartRate}
-                unit="BPM"
-                icon="heart"
-                gradient={["#EF4444", "#F87171", "#FCA5A5"]}
-                trend="down"
-                trendValue="-3%"
-                subtitle="Resting heart rate"
-                size="medium"
-              />
+              {todaysLog.heartRate > 0 && (
+                <ProfessionalMetricCard
+                  title="Heart Rate"
+                  value={todaysLog.heartRate}
+                  unit="BPM"
+                  icon="heart"
+                  gradient={["#EF4444", "#F87171", "#FCA5A5"]}
+                  trend={calculateTrend(todaysLog.heartRate, "heartRate").trend}
+                  trendValue={calculateTrend(todaysLog.heartRate, "heartRate").value}
+                  subtitle="Resting heart rate"
+                  size="medium"
+                />
+              )}
             </View>
 
-            {/* Compact Metrics Row */}
-            <View style={styles.compactMetricsRow}>
-              <ProfessionalCard style={styles.compactMetric} glassEffect>
-                <View style={styles.compactMetricContent}>
-                  <Icon name="fitness" size={20} color={colors.warning} />
-                  <View style={styles.compactMetricText}>
-                    <Text style={styles.compactMetricValue}>{todaysLog.weight} kg</Text>
-                    <Text style={styles.compactMetricLabel}>Weight</Text>
-                  </View>
-                  <Text style={styles.compactMetricChange}>-0.5kg</Text>
-                </View>
-              </ProfessionalCard>
+            {/* Compact Metrics Row - Only show if data exists */}
+            {(todaysLog.weight > 0 || todaysLog.calories > 0) && (
+              <View style={styles.compactMetricsRow}>
+                {todaysLog.weight > 0 && (
+                  <ProfessionalCard style={styles.compactMetric} glassEffect>
+                    <View style={styles.compactMetricContent}>
+                      <Icon name="fitness" size={20} color={colors.warning} />
+                      <View style={styles.compactMetricText}>
+                        <Text style={styles.compactMetricValue}>{todaysLog.weight} kg</Text>
+                        <Text style={styles.compactMetricLabel}>Weight</Text>
+                      </View>
+                    </View>
+                  </ProfessionalCard>
+                )}
 
-              <ProfessionalCard style={styles.compactMetric} glassEffect>
-                <View style={styles.compactMetricContent}>
-                  <Icon name="flame" size={20} color={colors.accent} />
-                  <View style={styles.compactMetricText}>
-                    <Text style={styles.compactMetricValue}>{todaysLog.calories}</Text>
-                    <Text style={styles.compactMetricLabel}>Calories</Text>
-                  </View>
-                  <Text style={styles.compactMetricChange}>+150</Text>
-                </View>
-              </ProfessionalCard>
-            </View>
+                {todaysLog.calories > 0 && (
+                  <ProfessionalCard style={styles.compactMetric} glassEffect>
+                    <View style={styles.compactMetricContent}>
+                      <Icon name="flame" size={20} color={colors.accent} />
+                      <View style={styles.compactMetricText}>
+                        <Text style={styles.compactMetricValue}>{todaysLog.calories}</Text>
+                        <Text style={styles.compactMetricLabel}>Calories</Text>
+                      </View>
+                    </View>
+                  </ProfessionalCard>
+                )}
+              </View>
+            )}
           </View>
         ) : (
           <ProfessionalCard gradient={colors.gradientPrimary} style={styles.noDataCard} glassEffect elevation="lg">
@@ -256,56 +260,12 @@ const HomeScreen: React.FC = () => {
             </View>
           </ProfessionalCard>
         )}
-        
-        {/* Health Insights */}
-        <View style={styles.insightsSection}>
-          <Text style={styles.sectionTitle}>Health Insights</Text>
-          <View style={styles.insightsGrid}>
-            {[
-              {
-                title: "Hydration Goal",
-                subtitle: "You're 80% towards your daily goal",
-                icon: "water",
-                color: colors.info,
-                progress: 80,
-              },
-              {
-                title: "Activity Level",
-                subtitle: "Great job! You exceeded your step goal",
-                icon: "footsteps",
-                color: colors.success,
-                progress: 120,
-              },
-              {
-                title: "Sleep Pattern",
-                subtitle: "Consider going to bed 30 minutes earlier",
-                icon: "bed",
-                color: colors.warning,
-                progress: 75,
-              },
-            ].map((insight, index) => (
-              <ProfessionalCard key={index} style={styles.insightCard} glassEffect>
-                <View style={styles.insightContent}>
-                  <View style={[styles.insightIcon, { backgroundColor: insight.color + "20" }]}>
-                    <Icon name={insight.icon} size={20} color={insight.color} />
-                  </View>
-                  <View style={styles.insightText}>
-                    <Text style={styles.insightTitle}>{insight.title}</Text>
-                    <Text style={styles.insightSubtitle}>{insight.subtitle}</Text>
-                  </View>
-                  <View style={styles.insightProgress}>
-                    <Text style={styles.insightProgressText}>{insight.progress}%</Text>
-                  </View>
-                </View>
-              </ProfessionalCard>
-            ))}
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
+// Keep the same styles but remove unused ones
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -416,17 +376,6 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     marginBottom: dimensions.spacing.xl,
   },
-  miniVisualization: {
-    flexDirection: "row",
-    alignItems: "end",
-    gap: dimensions.spacing.sm,
-  },
-  visualizationBar: {
-    width: 4,
-    height: 16,
-    backgroundColor: colors.textPrimary,
-    borderRadius: 2,
-  },
   quickActionsSection: {
     paddingHorizontal: dimensions.layout.containerPadding,
     marginBottom: dimensions.layout.sectionSpacing,
@@ -502,11 +451,6 @@ const styles = StyleSheet.create({
     fontSize: dimensions.fontSize.caption,
     color: colors.textSecondary,
   },
-  compactMetricChange: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.success,
-    fontWeight: "600",
-  },
   noDataCard: {
     marginHorizontal: dimensions.layout.containerPadding,
     marginTop: dimensions.spacing.md,
@@ -555,115 +499,6 @@ const styles = StyleSheet.create({
     fontSize: dimensions.fontSize.bodyLarge,
     fontWeight: "700",
     color: colors.textPrimary,
-  },
-  aiCard: {
-    marginHorizontal: dimensions.layout.containerPadding,
-    marginBottom: dimensions.layout.sectionSpacing,
-  },
-  aiContent: {
-    position: "relative",
-  },
-  aiHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: dimensions.spacing.xl,
-  },
-  aiIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.glassStrong,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: dimensions.spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  aiTextContainer: {
-    flex: 1,
-  },
-  aiTitle: {
-    fontSize: dimensions.fontSize.titleLarge,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.xs,
-  },
-  aiSubtitle: {
-    fontSize: dimensions.fontSize.body,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  aiButton: {
-    borderRadius: dimensions.borderRadius.full,
-    overflow: "hidden",
-    alignSelf: "flex-start",
-  },
-  aiButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: dimensions.spacing.xl,
-    paddingVertical: dimensions.spacing.md,
-    gap: dimensions.spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  aiButtonText: {
-    fontSize: dimensions.fontSize.bodyLarge,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  aiRobotContainer: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    opacity: 0.2,
-  },
-  aiRobot: {
-    transform: [{ rotate: "15deg" }],
-  },
-  insightsSection: {
-    paddingHorizontal: dimensions.layout.containerPadding,
-    marginBottom: dimensions.layout.scrollBottomPadding,
-  },
-  insightsGrid: {
-    gap: dimensions.spacing.md,
-  },
-  insightCard: {
-    marginBottom: dimensions.spacing.sm,
-  },
-  insightContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  insightIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: dimensions.spacing.md,
-  },
-  insightText: {
-    flex: 1,
-  },
-  insightTitle: {
-    fontSize: dimensions.fontSize.bodyLarge,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.xs,
-  },
-  insightSubtitle: {
-    fontSize: dimensions.fontSize.body,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  insightProgress: {
-    alignItems: "center",
-  },
-  insightProgressText: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "700",
-    color: colors.primary,
   },
   dateSection: {
     paddingHorizontal: dimensions.layout.containerPadding,

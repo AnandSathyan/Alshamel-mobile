@@ -2,55 +2,80 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  type TextInputProps,
-  type ViewStyle,
-} from "react-native"
+import { View, Text, TextInput, StyleSheet, Animated, TouchableOpacity, ScrollView, Platform } from "react-native"
+import LinearGradient from "react-native-linear-gradient"
 import { Icon } from "./Icon"
 import { colors } from "../../constants/colors"
 import { dimensions } from "../../constants/dimensions"
 
-interface AnimatedInputProps extends TextInputProps {
-  label?: string
-  error?: string
-  containerStyle?: ViewStyle
+interface AnimatedInputProps {
+  placeholder: string
+  value: string
+  onChangeText: (text: string) => void
   inputType?: "text" | "number" | "decimal" | "email"
   icon?: string
   suffix?: string
+  error?: string
+  multiline?: boolean
+  numberOfLines?: number
+  style?: any
+  containerStyle?: any
   suggestions?: string[]
   onSuggestionPress?: (suggestion: string) => void
 }
 
 export const AnimatedInput: React.FC<AnimatedInputProps> = ({
-  label,
-  error,
-  containerStyle,
+  placeholder,
+  value,
+  onChangeText,
   inputType = "text",
   icon,
   suffix,
+  error,
+  multiline = false,
+  numberOfLines = 1,
+  style,
+  containerStyle,
   suggestions = [],
   onSuggestionPress,
-  value,
-  onChangeText,
-  style,
-  ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current
-  const scaleValue = useRef(new Animated.Value(1)).current
+  const animatedValue = useRef(new Animated.Value(0)).current
+
+  const handleFocus = () => {
+    setIsFocused(true)
+    setShowSuggestions(suggestions.length > 0)
+    Animated.timing(animatedValue, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start()
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    // Delay hiding suggestions to allow for suggestion press
+    setTimeout(() => setShowSuggestions(false), 150)
+    Animated.timing(animatedValue, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start()
+  }
+
+  const handleSuggestionPress = (suggestion: string) => {
+    onSuggestionPress?.(suggestion)
+    setShowSuggestions(false)
+    setIsFocused(false)
+  }
 
   const getKeyboardType = () => {
     switch (inputType) {
       case "number":
-      case "decimal":
         return "numeric"
+      case "decimal":
+        return Platform.OS === "ios" ? "decimal-pad" : "numeric"
       case "email":
         return "email-address"
       default:
@@ -58,109 +83,52 @@ export const AnimatedInput: React.FC<AnimatedInputProps> = ({
     }
   }
 
-  const handleFocus = () => {
-    setIsFocused(true)
-    setShowSuggestions(suggestions.length > 0)
+  const borderColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.glassBorder, colors.primary],
+  })
 
-    Animated.parallel([
-      Animated.timing(animatedValue, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-      Animated.spring(scaleValue, {
-        toValue: 1.02,
-        useNativeDriver: true,
-      }),
-    ]).start()
-  }
-
-  const handleBlur = () => {
-    setIsFocused(false)
-    setShowSuggestions(false)
-
-    Animated.parallel([
-      Animated.timing(animatedValue, {
-        toValue: value ? 1 : 0,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-      Animated.spring(scaleValue, {
-        toValue: 1,
-        useNativeDriver: true,
-      }),
-    ]).start()
-  }
-
-  const handleChangeText = (text: string) => {
-    if (inputType === "decimal") {
-      // Allow decimal numbers
-      const numericText = text.replace(/[^0-9.]/g, "")
-      const parts = numericText.split(".")
-      if (parts.length > 2) {
-        return // Don't allow multiple decimal points
-      }
-      onChangeText?.(numericText)
-    } else if (inputType === "number") {
-      // Allow only integers
-      const numericText = text.replace(/[^0-9]/g, "")
-      onChangeText?.(numericText)
-    } else {
-      onChangeText?.(text)
-    }
-  }
-
-  const handleSuggestionPress = (suggestion: string) => {
-    onSuggestionPress?.(suggestion)
-    setShowSuggestions(false)
-  }
-
-  const labelStyle = {
-    position: "absolute" as const,
-    left: icon ? 45 : 16,
-    top: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [18, 8],
-    }),
-    fontSize: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [16, 12],
-    }),
-    color: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [colors.textSecondary, isFocused ? colors.primary : colors.textSecondary],
-    }),
-  }
+  const glowOpacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.3],
+  })
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <Animated.View
-        style={[
-          styles.inputContainer,
-          { transform: [{ scale: scaleValue }] },
-          isFocused && styles.inputContainerFocused,
-          error && styles.inputContainerError,
-        ]}
-      >
+      <Animated.View style={[styles.inputContainer, { borderColor }]}>
+        {/* Glow effect */}
+        <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
+
+        {/* Icon */}
         {icon && (
           <View style={styles.iconContainer}>
-            <Icon name={icon} size={20} color={isFocused ? colors.primary : colors.textSecondary} />
+            <Icon name={icon} size={20} color={isFocused ? colors.primary : colors.textTertiary} />
           </View>
         )}
 
-        {label && <Animated.Text style={labelStyle}>{label}</Animated.Text>}
-
+        {/* Input */}
         <TextInput
-          style={[styles.input, icon && styles.inputWithIcon, suffix && styles.inputWithSuffix, style]}
+          style={[
+            styles.input,
+            multiline && styles.multilineInput,
+            icon && styles.inputWithIcon,
+            suffix && styles.inputWithSuffix,
+            style,
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
           value={value}
-          onChangeText={handleChangeText}
+          onChangeText={onChangeText}
           onFocus={handleFocus}
           onBlur={handleBlur}
           keyboardType={getKeyboardType()}
-          placeholderTextColor={colors.textTertiary}
-          {...props}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? "top" : "center"}
+          selectionColor={colors.primary}
         />
 
+        {/* Suffix */}
         {suffix && (
           <View style={styles.suffixContainer}>
             <Text style={styles.suffixText}>{suffix}</Text>
@@ -168,25 +136,34 @@ export const AnimatedInput: React.FC<AnimatedInputProps> = ({
         )}
       </Animated.View>
 
+      {/* Error message */}
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {/* Suggestions */}
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
-          {suggestions.map((suggestion, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.suggestionItem}
-              onPress={() => handleSuggestionPress(suggestion)}
+          <LinearGradient colors={[colors.surface, colors.surfaceSecondary]} style={styles.suggestionsGradient}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.suggestionsContent}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.suggestionText}>{suggestion}</Text>
-            </TouchableOpacity>
-          ))}
+              {suggestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.suggestionButton}
+                  onPress={() => handleSuggestionPress(suggestion)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient colors={colors.gradientPrimary} style={styles.suggestionGradient}>
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </LinearGradient>
         </View>
-      )}
-
-      {error && (
-        <Animated.View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={16} color={colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-        </Animated.View>
       )}
     </View>
   )
@@ -197,96 +174,83 @@ const styles = StyleSheet.create({
     marginBottom: dimensions.spacing.lg,
   },
   inputContainer: {
-    position: "relative",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: dimensions.borderRadius.lg,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
+    borderRadius: dimensions.borderRadius.lg,
+    borderWidth: 2,
     minHeight: 56,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: dimensions.spacing.md,
+    position: "relative",
+    overflow: "hidden",
   },
-  inputContainerFocused: {
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  inputContainerError: {
-    borderColor: colors.error,
+  glow: {
+    position: "absolute",
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    backgroundColor: colors.primaryGlow,
+    borderRadius: dimensions.borderRadius.lg + 2,
+    zIndex: -1,
   },
   iconContainer: {
-    position: "absolute",
-    left: 16,
-    top: 18,
-    zIndex: 1,
+    marginRight: dimensions.spacing.md,
   },
   input: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 8,
-    fontSize: dimensions.fontSize.body,
+    fontSize: dimensions.fontSize.bodyLarge,
     color: colors.textPrimary,
-    textAlignVertical: "top",
+    paddingVertical: dimensions.spacing.md,
   },
   inputWithIcon: {
-    paddingLeft: 48,
+    marginLeft: 0,
   },
   inputWithSuffix: {
-    paddingRight: 48,
+    marginRight: 0,
+  },
+  multilineInput: {
+    minHeight: 120,
+    paddingTop: dimensions.spacing.md,
   },
   suffixContainer: {
-    position: "absolute",
-    right: 16,
-    top: 18,
-    justifyContent: "center",
+    marginLeft: dimensions.spacing.sm,
   },
   suffixText: {
     fontSize: dimensions.fontSize.body,
-    color: colors.textSecondary,
+    color: colors.textTertiary,
     fontWeight: "500",
-  },
-  suggestionsContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: dimensions.borderRadius.md,
-    marginTop: dimensions.spacing.xs,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  suggestionItem: {
-    paddingVertical: dimensions.spacing.md,
-    paddingHorizontal: dimensions.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  suggestionText: {
-    fontSize: dimensions.fontSize.body,
-    color: colors.textPrimary,
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: dimensions.spacing.sm,
-    paddingHorizontal: dimensions.spacing.xs,
   },
   errorText: {
     fontSize: dimensions.fontSize.caption,
     color: colors.error,
-    marginLeft: dimensions.spacing.xs,
-    flex: 1,
+    marginTop: dimensions.spacing.sm,
+    marginLeft: dimensions.spacing.sm,
+    fontWeight: "500",
+  },
+  suggestionsContainer: {
+    marginTop: dimensions.spacing.sm,
+    borderRadius: dimensions.borderRadius.lg,
+    overflow: "hidden",
+    ...dimensions.shadow.md,
+  },
+  suggestionsGradient: {
+    padding: dimensions.spacing.md,
+  },
+  suggestionsContent: {
+    gap: dimensions.spacing.sm,
+  },
+  suggestionButton: {
+    borderRadius: dimensions.borderRadius.md,
+    overflow: "hidden",
+  },
+  suggestionGradient: {
+    paddingHorizontal: dimensions.spacing.md,
+    paddingVertical: dimensions.spacing.sm,
+  },
+  suggestionText: {
+    fontSize: dimensions.fontSize.body,
+    color: colors.textPrimary,
+    fontWeight: "500",
   },
 })

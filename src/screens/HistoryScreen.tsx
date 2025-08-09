@@ -3,7 +3,7 @@ import type React from "react"
 import { useState } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from "react-native-linear-gradient"
 import { LineChart } from "react-native-chart-kit"
 import { Icon } from "../components/common/Icon"
 import { ProfessionalCard } from "../components/common/ProfessionalCard"
@@ -99,8 +99,10 @@ const HistoryScreen: React.FC = () => {
 
   const calculateAverage = (data: ChartDataPoint[], metric: MetricType): number => {
     if (data.length === 0) return 0
-    const sum = data.reduce((acc, item) => acc + item[metric], 0)
-    return sum / data.length
+    const validData = data.filter((item) => item[metric] > 0)
+    if (validData.length === 0) return 0
+    const sum = validData.reduce((acc, item) => acc + item[metric], 0)
+    return sum / validData.length
   }
 
   const MetricSelector: React.FC = () => {
@@ -165,101 +167,6 @@ const HistoryScreen: React.FC = () => {
           showNotifications={false}
         />
 
-        {/* Activity Summary Cards */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Today's Activities</Text>
-          <View style={styles.activityGrid}>
-            <ProfessionalCard gradient={["#84CC16", "#65A30D", "#4ADE80"]} style={styles.activityCard} glassEffect>
-              <View style={styles.activityContent}>
-                <View style={styles.activityHeader}>
-                  <Icon name="sunny" size={20} color={colors.textPrimary} />
-                  <Text style={styles.activityTitle}>Morning Walk</Text>
-                </View>
-                <View style={styles.activityBadge}>
-                  <Icon name="time" size={14} color={colors.textPrimary} />
-                  <Text style={styles.activityTime}>44m 22s</Text>
-                </View>
-              </View>
-            </ProfessionalCard>
-
-            <ProfessionalCard gradient={["#0EA5E9", "#0284C7", "#38BDF8"]} style={styles.activityCard} glassEffect>
-              <View style={styles.activityContent}>
-                <View style={styles.activityHeader}>
-                  <Icon name="moon" size={20} color={colors.textPrimary} />
-                  <Text style={styles.activityTitle}>Evening Walk</Text>
-                </View>
-                <View style={styles.activityBadge}>
-                  <Icon name="time" size={14} color={colors.textPrimary} />
-                  <Text style={styles.activityTime}>30m 45s</Text>
-                </View>
-              </View>
-            </ProfessionalCard>
-
-            <ProfessionalCard gradient={colors.gradientSuccess} style={styles.activityCardLarge} glassEffect>
-              <View style={styles.activityContent}>
-                <View style={styles.activityHeader}>
-                  <Icon name="fitness" size={24} color={colors.textPrimary} />
-                  <Text style={styles.activityTitleLarge}>Total Activity</Text>
-                </View>
-                <View style={styles.activityStats}>
-                  <Text style={styles.activityValue}>2h 15m 7s</Text>
-                  <Text style={styles.activitySubtitle}>Active time today</Text>
-                </View>
-              </View>
-            </ProfessionalCard>
-          </View>
-        </View>
-
-        {/* Progress Analytics */}
-        <View style={styles.progressSection}>
-          <Text style={styles.sectionTitle}>Progress Analytics</Text>
-          <View style={styles.progressGrid}>
-            <ProfessionalCard style={styles.progressCard} glassEffect elevation="lg">
-              <View style={styles.progressContent}>
-                <View style={styles.progressHeader}>
-                  <View style={[styles.progressDot, { backgroundColor: colors.success }]} />
-                  <Text style={styles.progressTitle}>Activity Level</Text>
-                </View>
-                <Text style={styles.progressSubtitle}>Your general goal achievements</Text>
-
-                <View style={styles.progressVisualization}>
-                  <View style={styles.progressCircle}>
-                    <LinearGradient colors={colors.gradientSuccess} style={styles.progressCircleGradient}>
-                      <Text style={styles.progressValue}>38%</Text>
-                    </LinearGradient>
-                  </View>
-                  <View style={styles.progressDetails}>
-                    <Text style={styles.progressChange}>+ 5%</Text>
-                    <Text style={styles.progressChangeLabel}>vs last week</Text>
-                  </View>
-                </View>
-              </View>
-            </ProfessionalCard>
-
-            <ProfessionalCard style={styles.progressCard} glassEffect elevation="lg">
-              <View style={styles.progressContent}>
-                <View style={styles.progressHeader}>
-                  <View style={[styles.progressDot, { backgroundColor: colors.warning }]} />
-                  <Text style={styles.progressTitle}>Endurance</Text>
-                </View>
-                <Text style={styles.progressSubtitle}>Your endurance success rate</Text>
-
-                <View style={styles.progressVisualization}>
-                  <View style={styles.progressCircle}>
-                    <LinearGradient colors={colors.gradientWarning} style={styles.progressCircleGradient}>
-                      <Text style={styles.progressValue}>82%</Text>
-                    </LinearGradient>
-                  </View>
-                  <View style={styles.progressDetails}>
-                    <Text style={styles.progressChange}>▲ 5%</Text>
-                    <Text style={styles.progressChangeLabel}>improvement</Text>
-                  </View>
-                </View>
-              </View>
-            </ProfessionalCard>
-          </View>
-        </View>
-
         {/* Simple Bar Chart - Required by specs */}
         <View style={styles.basicChartSection}>
           <SimpleBarChart data={chartData} />
@@ -297,7 +204,7 @@ const HistoryScreen: React.FC = () => {
             </View>
           </View>
 
-          {chartData.length > 0 ? (
+          {chartData.length > 0 && chartData.some((item) => item[selectedMetric] > 0) ? (
             <View style={styles.chartContainer}>
               <LineChart
                 data={chartDataFormatted}
@@ -325,50 +232,58 @@ const HistoryScreen: React.FC = () => {
           )}
         </ProfessionalCard>
 
-        {/* Weekly Summary */}
-        <View style={styles.summarySection}>
-          <Text style={styles.sectionTitle}>Weekly Summary</Text>
-          <ProfessionalCard style={styles.summaryCard} glassEffect elevation="lg">
-            <View style={styles.summaryGrid}>
-              {[
-                {
-                  title: "Avg Steps",
-                  value: Math.round(calculateAverage(chartData, "steps")).toLocaleString(),
-                  icon: "footsteps",
-                  gradient: colors.gradientSuccess,
-                },
-                {
-                  title: "Avg Water",
-                  value: `${calculateAverage(chartData, "water").toFixed(1)}L`,
-                  icon: "water",
-                  gradient: colors.gradientInfo,
-                },
-                {
-                  title: "Avg Sleep",
-                  value: `${calculateAverage(chartData, "sleep").toFixed(1)}h`,
-                  icon: "bed",
-                  gradient: colors.gradientPrimary,
-                },
-                {
-                  title: "Avg Heart Rate",
-                  value: `${Math.round(calculateAverage(chartData, "heartRate"))} BPM`,
-                  icon: "heart",
-                  gradient: ["#EF4444", "#F87171"],
-                },
-              ].map((item, index) => (
-                <View key={index} style={styles.summaryItem}>
-                  <LinearGradient colors={item.gradient} style={styles.summaryItemGradient}>
-                    <Icon name={item.icon} size={20} color={colors.textPrimary} />
-                  </LinearGradient>
-                  <View style={styles.summaryItemContent}>
-                    <Text style={styles.summaryItemTitle}>{item.title}</Text>
-                    <Text style={styles.summaryItemValue}>{item.value}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ProfessionalCard>
-        </View>
+        {/* Weekly Summary - Only show if we have data */}
+        {weeklyLogs && weeklyLogs.length > 0 && (
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>Weekly Summary</Text>
+            <ProfessionalCard style={styles.summaryCard} glassEffect elevation="lg">
+              <View style={styles.summaryGrid}>
+                {[
+                  {
+                    title: "Avg Steps",
+                    value: Math.round(calculateAverage(chartData, "steps")).toLocaleString(),
+                    icon: "footsteps",
+                    gradient: colors.gradientSuccess,
+                    show: calculateAverage(chartData, "steps") > 0,
+                  },
+                  {
+                    title: "Avg Water",
+                    value: `${calculateAverage(chartData, "water").toFixed(1)}L`,
+                    icon: "water",
+                    gradient: colors.gradientInfo,
+                    show: calculateAverage(chartData, "water") > 0,
+                  },
+                  {
+                    title: "Avg Sleep",
+                    value: `${calculateAverage(chartData, "sleep").toFixed(1)}h`,
+                    icon: "bed",
+                    gradient: colors.gradientPrimary,
+                    show: calculateAverage(chartData, "sleep") > 0,
+                  },
+                  {
+                    title: "Avg Heart Rate",
+                    value: `${Math.round(calculateAverage(chartData, "heartRate"))} BPM`,
+                    icon: "heart",
+                    gradient: ["#EF4444", "#F87171"],
+                    show: calculateAverage(chartData, "heartRate") > 0,
+                  },
+                ]
+                  .filter((item) => item.show)
+                  .map((item, index) => (
+                    <View key={index} style={styles.summaryItem}>
+                      <LinearGradient colors={item.gradient} style={styles.summaryItemGradient}>
+                        <Icon name={item.icon} size={20} color={colors.textPrimary} />
+                      </LinearGradient>
+                      <View style={styles.summaryItemContent}>
+                        <Text style={styles.summaryItemTitle}>{item.title}</Text>
+                        <Text style={styles.summaryItemValue}>{item.value}</Text>
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            </ProfessionalCard>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -417,143 +332,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: "500",
   },
-  activitySection: {
-    paddingHorizontal: dimensions.layout.containerPadding,
-    paddingTop: dimensions.layout.screenPaddingTop,
-    marginBottom: dimensions.layout.sectionSpacing,
-  },
-  activityGrid: {
-    gap: dimensions.spacing.md,
-  },
-  activityCard: {
-    minHeight: 80,
-  },
-  activityCardLarge: {
-    minHeight: 120,
-  },
-  activityContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  activityHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: dimensions.fontSize.bodyLarge,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginLeft: dimensions.spacing.sm,
-  },
-  activityTitleLarge: {
-    fontSize: dimensions.fontSize.title,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginLeft: dimensions.spacing.sm,
-  },
-  activityBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.glassStrong,
-    paddingHorizontal: dimensions.spacing.md,
-    paddingVertical: dimensions.spacing.sm,
-    borderRadius: dimensions.borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  activityTime: {
-    fontSize: dimensions.fontSize.caption,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginLeft: dimensions.spacing.xs,
-  },
-  activityStats: {
-    alignItems: "flex-end",
-  },
-  activityValue: {
-    fontSize: dimensions.fontSize.titleLarge,
-    fontWeight: "800",
-    color: colors.textPrimary,
-  },
-  activitySubtitle: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.textSecondary,
-    marginTop: dimensions.spacing.xs,
-  },
-  progressSection: {
-    paddingHorizontal: dimensions.layout.containerPadding,
-    marginBottom: dimensions.layout.sectionSpacing,
-  },
-  progressGrid: {
-    gap: dimensions.spacing.md,
-  },
-  progressCard: {
-    padding: dimensions.spacing.xl,
-  },
-  progressContent: {
-    alignItems: "flex-start",
-  },
-  progressHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: dimensions.spacing.sm,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: dimensions.spacing.sm,
-  },
-  progressTitle: {
-    fontSize: dimensions.fontSize.bodyLarge,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  progressSubtitle: {
-    fontSize: dimensions.fontSize.body,
-    color: colors.textSecondary,
-    marginBottom: dimensions.spacing.xl,
-  },
-  progressVisualization: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-  },
-  progressCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: dimensions.spacing.lg,
-  },
-  progressCircleGradient: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: colors.glassBorder,
-  },
-  progressValue: {
-    fontSize: dimensions.fontSize.titleLarge,
-    fontWeight: "800",
-    color: colors.textPrimary,
-  },
-  progressDetails: {
-    flex: 1,
-  },
-  progressChange: {
-    fontSize: dimensions.fontSize.bodyLarge,
-    fontWeight: "700",
-    color: colors.success,
-    marginBottom: dimensions.spacing.xs,
-  },
-  progressChangeLabel: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.textSecondary,
-  },
   chartSection: {
     paddingHorizontal: dimensions.layout.containerPadding,
     marginBottom: dimensions.spacing.xl,
@@ -562,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: dimensions.spacing.lg,
   },
   metricSelector: {
-    marginBottom: dimensions.spacing.xl,
+    marginBottom: dimensions.spacing.lg,
   },
   metricScrollContent: {
     paddingRight: dimensions.spacing.lg,
@@ -576,7 +354,6 @@ const styles = StyleSheet.create({
     borderRadius: dimensions.borderRadius.full,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    padding:80
   },
   metricButtonActive: {
     transform: [{ scale: 1.05 }],
@@ -586,6 +363,9 @@ const styles = StyleSheet.create({
     fontSize: dimensions.fontSize.body,
     fontWeight: "600",
     color: colors.textSecondary,
+    paddingBottom:22,
+    paddingRight:32
+
   },
   metricButtonTextActive: {
     color: colors.textPrimary,
