@@ -63,7 +63,7 @@ const HomeScreen: React.FC = () => {
       >
         {/* Professional Header */}
         <ProfessionalHeader
-          title={`${getGreeting()}, James`}
+          title={`${getGreeting()},`}
           subtitle="Let's achieve your wellness goals today"
           notificationCount={3}
           gradient={[colors.background, colors.backgroundSecondary, colors.surface]}
@@ -256,42 +256,7 @@ const HomeScreen: React.FC = () => {
             </View>
           </ProfessionalCard>
         )}
-
-        {/* AI Health Assistant */}
-        <ProfessionalCard
-          gradient={colors.gradientSecondary}
-          style={styles.aiCard}
-          glassEffect
-          elevation="lg"
-          shadowColor={colors.shadowSecondary}
-        >
-          <View style={styles.aiContent}>
-            <View style={styles.aiHeader}>
-              <View style={styles.aiIconContainer}>
-                <Icon name="medical" size={28} color={colors.textPrimary} />
-              </View>
-              <View style={styles.aiTextContainer}>
-                <Text style={styles.aiTitle}>AI Health Assistant</Text>
-                <Text style={styles.aiSubtitle}>Get personalized health insights and recommendations</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.aiButton}>
-              <LinearGradient colors={[colors.glass, colors.glassStrong]} style={styles.aiButtonGradient}>
-                <Text style={styles.aiButtonText}>Start Consultation</Text>
-                <Icon name="arrow-forward" size={16} color={colors.textPrimary} />
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Decorative robot illustration placeholder */}
-            <View style={styles.aiRobotContainer}>
-              <View style={styles.aiRobot}>
-                <Icon name="medical" size={64} color={colors.textPrimary} />
-              </View>
-            </View>
-          </View>
-        </ProfessionalCard>
-
+        
         {/* Health Insights */}
         <View style={styles.insightsSection}>
           <Text style={styles.sectionTitle}>Health Insights</Text>
