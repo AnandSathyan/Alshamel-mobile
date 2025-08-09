@@ -1,0 +1,49 @@
+{
+  "healthLogs": [
+    {
+      "id": "1",
+      "date": "2025-08-01",
+      "steps": 8500,
+      "waterIntake": 2.1,
+      "sleepDuration": 7.5,
+      "createdAt": "2025-08-01T10:30:00Z",
+      "updatedAt": "2025-08-01T10:30:00Z"
+    },
+    {
+      "id": "2",
+      "date": "2025-08-02",
+      "steps": 12000,
+      "waterIntake": 2.8,
+      "sleepDuration": 8.0,
+      "createdAt": "2025-08-02T09:15:00Z",
+      "updatedAt": "2025-08-02T09:15:00Z"
+    },
+    {
+      "id": "3",
+      "date": "2025-08-03",
+      "steps": 6500,
+      "waterIntake": 1.9,
+      "sleepDuration": 6.5,
+      "createdAt": "2025-08-03T11:45:00Z",
+      "updatedAt": "2025-08-03T11:45:00Z"
+    },
+    {
+      "id": "4",
+      "date": "2025-08-04",
+      "steps": 9800,
+      "waterIntake": 2.5,
+      "sleepDuration": 7.8,
+      "createdAt": "2025-08-04T08:20:00Z",
+      "updatedAt": "2025-08-04T08:20:00Z"
+    },
+    {
+      "id": "5",
+      "date": "2025-08-05",
+      "steps": 11200,
+      "waterIntake": 3.0,
+      "sleepDuration": 8.2,
+      "createdAt": "2025-08-05T07:30:00Z",
+      "updatedAt": "2025-08-05T07:30:00Z"
+    }
+  ]
+}
