@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState, useRef } from "react"
 import {
   View,
@@ -13,10 +12,11 @@ import {
   TouchableOpacity,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import LinearGradient from 'react-native-linear-gradient';
 import { Icon } from "../components/common/Icon"
-import { Card } from "../components/common/Card"
+import { ProfessionalCard } from "../components/common/ProfessionalCard"
+import { ProfessionalHeader } from "../components/common/ProfessionalHeader"
 import { AnimatedInput } from "../components/common/AnimatedInput"
-import { Button } from "../components/common/Button"
 import { SuccessAnimation } from "../components/common/SuccessAnimation"
 import { useHealthData } from "../hooks/useHealthData"
 import { colors } from "../constants/colors"
@@ -45,19 +45,6 @@ const LogDataScreen: React.FC = () => {
   const [errors, setErrors] = useState<Partial<Record<keyof HealthMetrics, string>>>({})
   const [showSuccess, setShowSuccess] = useState(false)
   const fadeAnim = useRef(new Animated.Value(1)).current
-
-  // Exercise suggestions
-  const exerciseSuggestions = [
-    "30 min walk",
-    "45 min jogging",
-    "Gym workout",
-    "Yoga session",
-    "Swimming",
-    "Cycling",
-    "Weight training",
-    "Cardio workout",
-    "Rest day",
-  ]
 
   React.useEffect(() => {
     if (todaysLog) {
@@ -97,43 +84,9 @@ const LogDataScreen: React.FC = () => {
     if (formData.calories < 0 || formData.calories > 10000) {
       newErrors.calories = "Calories must be between 0 and 10,000"
     }
-    if (formData.bloodPressure.systolic < 0 || formData.bloodPressure.systolic > 300) {
-      newErrors.bloodPressure = "Invalid blood pressure values"
-    }
-    if (formData.bloodPressure.diastolic < 0 || formData.bloodPressure.diastolic > 200) {
-      newErrors.bloodPressure = "Invalid blood pressure values"
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
-  }
-
-  const clearForm = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setFormData({
-        steps: 0,
-        waterIntake: 0,
-        sleepDuration: 0,
-        heartRate: 0,
-        weight: 0,
-        bloodPressure: { systolic: 0, diastolic: 0 },
-        mood: 3,
-        calories: 0,
-        exercise: "",
-        notes: "",
-      })
-      setErrors({})
-
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start()
-    })
   }
 
   const handleSave = async () => {
@@ -143,7 +96,6 @@ const LogDataScreen: React.FC = () => {
 
     try {
       const today = new Date().toISOString().split("T")[0]
-
       if (todaysLog) {
         await updateMutation.mutateAsync({
           id: todaysLog.id,
@@ -156,7 +108,6 @@ const LogDataScreen: React.FC = () => {
           ...formData,
         })
         setShowSuccess(true)
-        clearForm()
       }
     } catch (error) {
       Alert.alert("Error", "Failed to save health data. Please try again.")
@@ -169,7 +120,6 @@ const LogDataScreen: React.FC = () => {
       [field]: value,
     }))
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -185,9 +135,9 @@ const LogDataScreen: React.FC = () => {
     return moods[mood - 1] || "😐"
   }
 
-  const getMoodText = (mood: number) => {
-    const moods = ["Very Bad", "Bad", "Neutral", "Good", "Excellent"]
-    return moods[mood - 1] || "Neutral"
+  const getMoodLabel = (mood: number) => {
+    const labels = ["Very Bad", "Bad", "Neutral", "Good", "Excellent"]
+    return labels[mood - 1] || "Neutral"
   }
 
   return (
@@ -204,253 +154,325 @@ const LogDataScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{todaysLog ? "Update Today's Data" : "Log Today's Health Data"}</Text>
-            <Text style={styles.subtitle}>Track your daily health metrics for better insights</Text>
-          </View>
+          {/* Professional Header */}
+          <ProfessionalHeader
+            title="Health Tracker"
+            subtitle={todaysLog ? "Update your daily metrics" : "Log your daily health data"}
+            showNotifications={false}
+          />
 
           <Animated.View style={{ opacity: fadeAnim }}>
-            {/* Activity & Movement Section */}
-            <Card style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${colors.chartSteps}20` }]}>
-                  <Icon name="fitness" size={24} color={colors.chartSteps} />
-                </View>
-                <Text style={styles.sectionTitle}>Activity & Movement</Text>
+            {/* Quick Overview Cards */}
+            <View style={styles.overviewSection}>
+              <Text style={styles.sectionTitle}>Today's Overview</Text>
+              <View style={styles.overviewGrid}>
+                {[
+                  {
+                    icon: "footsteps",
+                    label: "Steps",
+                    value: formData.steps > 0 ? formData.steps.toLocaleString() : "0",
+                    gradient: colors.gradientSuccess,
+                  },
+                  {
+                    icon: "water",
+                    label: "Water",
+                    value: formData.waterIntake > 0 ? `${formData.waterIntake}L` : "0L",
+                    gradient: colors.gradientInfo,
+                  },
+                  {
+                    icon: "bed",
+                    label: "Sleep",
+                    value: formData.sleepDuration > 0 ? `${formData.sleepDuration}h` : "0h",
+                    gradient: colors.gradientPrimary,
+                  },
+                  {
+                    icon: "heart",
+                    label: "Heart Rate",
+                    value: formData.heartRate > 0 ? `${formData.heartRate}` : "0",
+                    gradient: ["#EF4444", "#F87171"],
+                  },
+                ].map((item, index) => (
+                  <ProfessionalCard key={index} gradient={item.gradient} style={styles.overviewCard} glassEffect>
+                    <View style={styles.overviewCardContent}>
+                      <Icon name={item.icon} size={24} color={colors.textPrimary} />
+                      <Text style={styles.overviewValue}>{item.value}</Text>
+                      <Text style={styles.overviewLabel}>{item.label}</Text>
+                    </View>
+                  </ProfessionalCard>
+                ))}
               </View>
+            </View>
 
-              <AnimatedInput
-                // label="Daily Steps"
-                placeholder="Enter steps taken"
-                value={formData.steps > 0 ? formData.steps.toString() : ""}
-                onChangeText={(value) => updateField("steps", Number.parseInt(value) || 0)}
-                inputType="number"
-                icon="footsteps"
-                error={errors.steps}
-                suggestions={["5000", "7500", "10000", "12500", "15000"]}
-                onSuggestionPress={(value) => updateField("steps", Number.parseInt(value))}
-              />
+            {/* Activity & Movement Section */}
+            <View style={styles.inputSection}>
+              <ProfessionalCard style={styles.sectionCard} glassEffect elevation="lg">
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIcon, { backgroundColor: colors.successGlow }]}>
+                    <Icon name="fitness" size={24} color={colors.success} />
+                  </View>
+                  <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionCardTitle}>Activity & Movement</Text>
+                    <Text style={styles.sectionSubtitle}>Track your daily physical activity</Text>
+                  </View>
+                </View>
 
-              <AnimatedInput
-                // label="Exercise Activity"
-                placeholder="e.g., 30 min jogging, gym workout"
-                value={formData.exercise}
-                onChangeText={(value) => updateField("exercise", value)}
-                icon="barbell"
-                suggestions={exerciseSuggestions}
-                onSuggestionPress={(value) => updateField("exercise", value)}
-              />
+                <View style={styles.inputGroup}>
+                  <AnimatedInput
+                    placeholder="Enter steps taken"
+                    value={formData.steps > 0 ? formData.steps.toString() : ""}
+                    onChangeText={(value) => updateField("steps", Number.parseInt(value) || 0)}
+                    inputType="number"
+                    icon="footsteps"
+                    error={errors.steps}
+                    suggestions={["5000", "7500", "10000", "12500", "15000"]}
+                    onSuggestionPress={(value) => updateField("steps", Number.parseInt(value))}
+                  />
 
-              <AnimatedInput
-                // label="Calories Consumed"
-                placeholder="Enter calories"
-                value={formData.calories > 0 ? formData.calories.toString() : ""}
-                onChangeText={(value) => updateField("calories", Number.parseInt(value) || 0)}
-                inputType="number"
-                icon="flame"
-                suffix="kcal"
-                error={errors.calories}
-                suggestions={["1500", "1800", "2000", "2200", "2500"]}
-                onSuggestionPress={(value) => updateField("calories", Number.parseInt(value))}
-              />
-            </Card>
+                  <AnimatedInput
+                    placeholder="Enter calories consumed"
+                    value={formData.calories > 0 ? formData.calories.toString() : ""}
+                    onChangeText={(value) => updateField("calories", Number.parseInt(value) || 0)}
+                    inputType="number"
+                    icon="flame"
+                    suffix="kcal"
+                    error={errors.calories}
+                    suggestions={["1500", "1800", "2000", "2200", "2500"]}
+                    onSuggestionPress={(value) => updateField("calories", Number.parseInt(value))}
+                  />
+
+                  <AnimatedInput
+                    placeholder="Exercise activity (e.g., 30 min jogging)"
+                    value={formData.exercise}
+                    onChangeText={(value) => updateField("exercise", value)}
+                    icon="barbell"
+                    suggestions={["30 min walk", "45 min jogging", "Gym workout", "Yoga session", "Swimming"]}
+                    onSuggestionPress={(value) => updateField("exercise", value)}
+                  />
+                </View>
+              </ProfessionalCard>
+            </View>
 
             {/* Health Vitals Section */}
-            <Card style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${colors.chartHeartRate}20` }]}>
-                  <Icon name="heart" size={24} color={colors.chartHeartRate} />
+            <View style={styles.inputSection}>
+              <ProfessionalCard style={styles.sectionCard} glassEffect elevation="lg">
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIcon, { backgroundColor: colors.errorGlow }]}>
+                    <Icon name="heart" size={24} color={colors.error} />
+                  </View>
+                  <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionCardTitle}>Health Vitals</Text>
+                    <Text style={styles.sectionSubtitle}>Monitor your vital signs</Text>
+                  </View>
                 </View>
-                <Text style={styles.sectionTitle}>Health Vitals</Text>
-              </View>
 
-              <AnimatedInput
-                label={formData.heartRate > 0 ? "":"Heart Rate"}
-                placeholder="Enter heart rate"
-                value={formData.heartRate > 0 ? formData.heartRate.toString() : ""}
-                onChangeText={(value) => updateField("heartRate", Number.parseInt(value) || 0)}
-                inputType="number"
-                icon="pulse"
-                suffix="BPM"
-                error={errors.heartRate}
-                // style={{marginTop:"10px"}}
-                suggestions={["60", "70", "80", "90", "100"]}
-                onSuggestionPress={(value) => updateField("heartRate", Number.parseInt(value))}
-              />
-
-              <AnimatedInput
-                label={formData.weight > 0 ? "":"Weight"}
-                placeholder="Enter weight"
-                value={formData.weight > 0 ? formData.weight.toString() : ""}
-                onChangeText={(value) => updateField("weight", Number.parseFloat(value) || 0)}
-                inputType="decimal"
-                icon="fitness"
-                suffix="kg"
-                error={errors.weight}
-              />
-
-              <View style={styles.bloodPressureContainer}>
-                <Text style={styles.bloodPressureLabel}>Blood Pressure</Text>
-                <View style={styles.bloodPressureRow}>
+                <View style={styles.inputGroup}>
                   <AnimatedInput
-                    placeholder="Systolic"
-                    value={formData.bloodPressure.systolic > 0 ? formData.bloodPressure.systolic.toString() : ""}
-                    onChangeText={(value) =>
-                      updateField("bloodPressure", {
-                        ...formData.bloodPressure,
-                        systolic: Number.parseInt(value) || 0,
-                      })
-                    }
+                    placeholder="Enter heart rate"
+                    value={formData.heartRate > 0 ? formData.heartRate.toString() : ""}
+                    onChangeText={(value) => updateField("heartRate", Number.parseInt(value) || 0)}
                     inputType="number"
-                    containerStyle={styles.bloodPressureInput}
-                    suggestions={["110", "120", "130", "140"]}
-                    onSuggestionPress={(value) =>
-                      updateField("bloodPressure", {
-                        ...formData.bloodPressure,
-                        systolic: Number.parseInt(value),
-                      })
-                    }
+                    icon="pulse"
+                    suffix="BPM"
+                    error={errors.heartRate}
+                    suggestions={["60", "70", "80", "90", "100"]}
+                    onSuggestionPress={(value) => updateField("heartRate", Number.parseInt(value))}
                   />
-                  <Text style={styles.bloodPressureSeparator}>/</Text>
+
                   <AnimatedInput
-                    placeholder="Diastolic"
-                    value={formData.bloodPressure.diastolic > 0 ? formData.bloodPressure.diastolic.toString() : ""}
-                    onChangeText={(value) =>
-                      updateField("bloodPressure", {
-                        ...formData.bloodPressure,
-                        diastolic: Number.parseInt(value) || 0,
-                      })
-                    }
-                    inputType="number"
-                    containerStyle={styles.bloodPressureInput}
-                    suggestions={["70", "80", "90", "100"]}
-                    onSuggestionPress={(value) =>
-                      updateField("bloodPressure", {
-                        ...formData.bloodPressure,
-                        diastolic: Number.parseInt(value),
-                      })
-                    }
+                    placeholder="Enter weight"
+                    value={formData.weight > 0 ? formData.weight.toString() : ""}
+                    onChangeText={(value) => updateField("weight", Number.parseFloat(value) || 0)}
+                    inputType="decimal"
+                    icon="fitness"
+                    suffix="kg"
+                    error={errors.weight}
                   />
+
+                  {/* Blood Pressure */}
+                  <View style={styles.bloodPressureContainer}>
+                    <Text style={styles.inputLabel}>Blood Pressure</Text>
+                    <View style={styles.bloodPressureRow}>
+                      <View style={styles.bloodPressureInput}>
+                        <AnimatedInput
+                          placeholder="Systolic"
+                          value={formData.bloodPressure.systolic > 0 ? formData.bloodPressure.systolic.toString() : ""}
+                          onChangeText={(value) =>
+                            updateField("bloodPressure", {
+                              ...formData.bloodPressure,
+                              systolic: Number.parseInt(value) || 0,
+                            })
+                          }
+                          inputType="number"
+                          containerStyle={styles.bloodPressureInputContainer}
+                          suggestions={["110", "120", "130", "140"]}
+                          onSuggestionPress={(value) =>
+                            updateField("bloodPressure", {
+                              ...formData.bloodPressure,
+                              systolic: Number.parseInt(value),
+                            })
+                          }
+                        />
+                      </View>
+                      <Text style={styles.bloodPressureSeparator}>/</Text>
+                      <View style={styles.bloodPressureInput}>
+                        <AnimatedInput
+                          placeholder="Diastolic"
+                          value={
+                            formData.bloodPressure.diastolic > 0 ? formData.bloodPressure.diastolic.toString() : ""
+                          }
+                          onChangeText={(value) =>
+                            updateField("bloodPressure", {
+                              ...formData.bloodPressure,
+                              diastolic: Number.parseInt(value) || 0,
+                            })
+                          }
+                          inputType="number"
+                          containerStyle={styles.bloodPressureInputContainer}
+                          suggestions={["70", "80", "90", "100"]}
+                          onSuggestionPress={(value) =>
+                            updateField("bloodPressure", {
+                              ...formData.bloodPressure,
+                              diastolic: Number.parseInt(value),
+                            })
+                          }
+                        />
+                      </View>
+                    </View>
+                    {errors.bloodPressure && <Text style={styles.errorText}>{errors.bloodPressure}</Text>}
+                  </View>
                 </View>
-                {errors.bloodPressure && <Text style={styles.errorText}>{errors.bloodPressure}</Text>}
-              </View>
-            </Card>
+              </ProfessionalCard>
+            </View>
 
             {/* Lifestyle & Wellness Section */}
-            <Card style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${colors.chartWater}20` }]}>
-                  <Icon name="water" size={24} color={colors.chartWater} />
+            <View style={styles.inputSection}>
+              <ProfessionalCard style={styles.sectionCard} glassEffect elevation="lg">
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIcon, { backgroundColor: colors.infoGlow }]}>
+                    <Icon name="water" size={24} color={colors.info} />
+                  </View>
+                  <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionCardTitle}>Lifestyle & Wellness</Text>
+                    <Text style={styles.sectionSubtitle}>Track your daily wellness habits</Text>
+                  </View>
                 </View>
-                <Text style={styles.sectionTitle}>Lifestyle & Wellness</Text>
-              </View>
 
-              <AnimatedInput
-                // label="Water Intake"
-                placeholder="Enter water intake"
-                value={formData.waterIntake > 0 ? formData.waterIntake.toString() : ""}
-                onChangeText={(value) => updateField("waterIntake", Number.parseFloat(value) || 0)}
-                inputType="decimal"
-                icon="water"
-                suffix="L"
-                error={errors.waterIntake}
-                suggestions={["1.5", "2.0", "2.5", "3.0", "3.5"]}
-                onSuggestionPress={(value) => updateField("waterIntake", Number.parseFloat(value))}
-              />
+                <View style={styles.inputGroup}>
+                  <AnimatedInput
+                    placeholder="Enter water intake"
+                    value={formData.waterIntake > 0 ? formData.waterIntake.toString() : ""}
+                    onChangeText={(value) => updateField("waterIntake", Number.parseFloat(value) || 0)}
+                    inputType="decimal"
+                    icon="water"
+                    suffix="L"
+                    error={errors.waterIntake}
+                    suggestions={["1.5", "2.0", "2.5", "3.0", "3.5"]}
+                    onSuggestionPress={(value) => updateField("waterIntake", Number.parseFloat(value))}
+                  />
 
-              <AnimatedInput
-                // label="Sleep Duration"
-                placeholder="Enter sleep hours"
-                value={formData.sleepDuration > 0 ? formData.sleepDuration.toString() : ""}
-                onChangeText={(value) => updateField("sleepDuration", Number.parseFloat(value) || 0)}
-                inputType="decimal"
-                icon="bed"
-                suffix="h"
-                error={errors.sleepDuration}
-                suggestions={["6.0", "7.0", "7.5", "8.0", "8.5"]}
-                onSuggestionPress={(value) => updateField("sleepDuration", Number.parseFloat(value))}
-              />
+                  <AnimatedInput
+                    placeholder="Enter sleep hours"
+                    value={formData.sleepDuration > 0 ? formData.sleepDuration.toString() : ""}
+                    onChangeText={(value) => updateField("sleepDuration", Number.parseFloat(value) || 0)}
+                    inputType="decimal"
+                    icon="bed"
+                    suffix="h"
+                    error={errors.sleepDuration}
+                    suggestions={["6.0", "7.0", "7.5", "8.0", "8.5"]}
+                    onSuggestionPress={(value) => updateField("sleepDuration", Number.parseFloat(value))}
+                  />
 
-              {/* Mood Selector */}
-              <View style={styles.moodContainer}>
-                <Text style={styles.moodLabel}>Mood Rating</Text>
-                <View style={styles.moodSelector}>
-                  {[1, 2, 3, 4, 5].map((mood) => (
-                    <TouchableOpacity
-                      key={mood}
-                      style={[styles.moodButton, formData.mood === mood && styles.moodButtonActive]}
-                      onPress={() => updateField("mood", mood)}
-                    >
-                      <Text style={styles.moodEmoji}>{getMoodEmoji(mood)}</Text>
-                      <Text style={[styles.moodNumber, formData.mood === mood && styles.moodNumberActive]}>{mood}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {/* Professional Mood Selector */}
+                  <View style={styles.moodContainer}>
+                    <Text style={styles.inputLabel}>Mood Assessment</Text>
+                    <Text style={styles.moodSubtitle}>How are you feeling today?</Text>
+
+                    <View style={styles.moodSelector}>
+                      {[1, 2, 3, 4, 5].map((mood) => (
+                        <TouchableOpacity
+                          key={mood}
+                          style={[styles.moodButton, formData.mood === mood && styles.moodButtonActive]}
+                          onPress={() => updateField("mood", mood)}
+                        >
+                          <LinearGradient
+                            colors={
+                              formData.mood === mood
+                                ? colors.gradientPrimary
+                                : [colors.surface, colors.surfaceSecondary]
+                            }
+                            style={styles.moodButtonGradient}
+                          >
+                            <Text style={styles.moodEmoji}>{getMoodEmoji(mood)}</Text>
+                            <Text style={[styles.moodNumber, formData.mood === mood && styles.moodNumberActive]}>
+                              {mood}
+                            </Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <View style={styles.moodFeedback}>
+                      <Text style={styles.moodFeedbackText}>
+                        Current mood: {getMoodLabel(formData.mood)} ({formData.mood}/5)
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.moodText}>
-                  Current: {getMoodText(formData.mood)} ({formData.mood}/5)
-                </Text>
-              </View>
-            </Card>
+              </ProfessionalCard>
+            </View>
 
             {/* Notes Section */}
-            <Card style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${colors.textSecondary}20` }]}>
-                  <Icon name="document-text" size={24} color={colors.textSecondary} />
+            <View style={styles.inputSection}>
+              <ProfessionalCard style={styles.sectionCard} glassEffect elevation="lg">
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIcon, { backgroundColor: colors.warningGlow }]}>
+                    <Icon name="document-text" size={24} color={colors.warning} />
+                  </View>
+                  <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionCardTitle}>Daily Notes</Text>
+                    <Text style={styles.sectionSubtitle}>Record your thoughts and observations</Text>
+                  </View>
                 </View>
-                <Text style={styles.sectionTitle}>Notes & Observations</Text>
-              </View>
 
-              <AnimatedInput
-                label="Daily Notes"
-                placeholder="How are you feeling today? Any observations about your health..."
-                value={formData.notes}
-                onChangeText={(value) => updateField("notes", value)}
-                multiline
-                numberOfLines={4}
-                style={styles.notesInput}
-                icon="create"
-              />
-            </Card>
-
-            {/* Summary Card */}
-            <Card style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>📋 Today's Summary</Text>
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Steps</Text>
-                  <Text style={styles.summaryValue}>{formData.steps > 0 ? formData.steps.toLocaleString() : "-"}</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Water</Text>
-                  <Text style={styles.summaryValue}>{formData.waterIntake > 0 ? `${formData.waterIntake}L` : "-"}</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Sleep</Text>
-                  <Text style={styles.summaryValue}>
-                    {formData.sleepDuration > 0 ? `${formData.sleepDuration}h` : "-"}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Heart Rate</Text>
-                  <Text style={styles.summaryValue}>{formData.heartRate > 0 ? `${formData.heartRate} BPM` : "-"}</Text>
-                </View>
-              </View>
-            </Card>
+                <AnimatedInput
+                  placeholder="How are you feeling today? Any observations about your health, energy levels, or general wellbeing..."
+                  value={formData.notes}
+                  onChangeText={(value) => updateField("notes", value)}
+                  multiline
+                  numberOfLines={4}
+                  style={styles.notesInput}
+                  icon="create"
+                />
+              </ProfessionalCard>
+            </View>
           </Animated.View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            {!todaysLog && (
-              <Button title="Clear Form" onPress={clearForm} variant="outline" style={styles.clearButton} />
-            )}
-            <Button
-              title={todaysLog ? "Update Data" : "Save Data"}
+          {/* Professional Save Button */}
+          <View style={styles.saveButtonContainer}>
+            <TouchableOpacity
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
               onPress={handleSave}
-              loading={isLoading}
-              style={styles.saveButton}
-            />
+              disabled={isLoading}
+              activeOpacity={0.95}
+            >
+              <LinearGradient
+                colors={isLoading ? colors.gradientDark : colors.gradientPrimary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveButtonGradient}
+              >
+                <View style={styles.saveButtonContent}>
+                  {isLoading ? (
+                    <Icon name="hourglass" size={20} color={colors.textPrimary} />
+                  ) : (
+                    <Icon name="checkmark-circle" size={20} color={colors.textPrimary} />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isLoading ? "Saving..." : todaysLog ? "Update Health Data" : "Save Health Data"}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -458,7 +480,6 @@ const LogDataScreen: React.FC = () => {
   )
 }
 
-// Styles remain the same as before
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -471,29 +492,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: dimensions.spacing.xxl,
+    paddingBottom: dimensions.layout.scrollBottomPadding,
   },
-  header: {
-    paddingHorizontal: dimensions.spacing.lg,
-    paddingVertical: dimensions.spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+  overviewSection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    paddingTop: dimensions.layout.screenPaddingTop,
+    marginBottom: dimensions.layout.sectionSpacing,
   },
-  title: {
-    fontSize: dimensions.fontSize.headline,
+  sectionTitle: {
+    fontSize: dimensions.fontSize.titleLarge,
     fontWeight: "700",
     color: colors.textPrimary,
+    marginBottom: dimensions.spacing.lg,
+  },
+  overviewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: dimensions.spacing.md,
+  },
+  overviewCard: {
+    width: "47%",
+    minHeight: 100,
+  },
+  overviewCardContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  overviewValue: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "800",
+    color: colors.textPrimary,
+    marginTop: dimensions.spacing.sm,
     marginBottom: dimensions.spacing.xs,
   },
-  subtitle: {
+  overviewLabel: {
     fontSize: dimensions.fontSize.body,
     color: colors.textSecondary,
-    lineHeight: 22,
+    fontWeight: "500",
+  },
+  inputSection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    marginBottom: dimensions.spacing.xl,
   },
   sectionCard: {
-    marginHorizontal: dimensions.spacing.lg,
-    marginTop: dimensions.spacing.lg,
     padding: dimensions.spacing.xl,
   },
   sectionHeader: {
@@ -502,158 +543,155 @@ const styles = StyleSheet.create({
     marginBottom: dimensions.spacing.xl,
   },
   sectionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: dimensions.spacing.md,
+    marginRight: dimensions.spacing.lg,
   },
-  sectionTitle: {
+  sectionTitleContainer: {
+    flex: 1,
+  },
+  sectionCardTitle: {
     fontSize: dimensions.fontSize.title,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: dimensions.spacing.xs,
+  },
+  sectionSubtitle: {
+    fontSize: dimensions.fontSize.body,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  inputGroup: {
+    gap: dimensions.spacing.lg,
+  },
+  inputLabel: {
+    fontSize: dimensions.fontSize.bodyLarge,
     fontWeight: "600",
     color: colors.textPrimary,
+    marginBottom: dimensions.spacing.md,
   },
   bloodPressureContainer: {
-    marginBottom: dimensions.spacing.lg,
-  },
-  bloodPressureLabel: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "500",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.md,
+    marginTop: dimensions.spacing.md,
   },
   bloodPressureRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: dimensions.spacing.md,
   },
   bloodPressureInput: {
     flex: 1,
+  },
+  bloodPressureInputContainer: {
     marginBottom: 0,
   },
   bloodPressureSeparator: {
-    fontSize: dimensions.fontSize.headline,
-    fontWeight: "bold",
+    fontSize: dimensions.fontSize.headlineLarge,
+    fontWeight: "700",
     color: colors.textPrimary,
-    marginHorizontal: dimensions.spacing.md,
-    marginTop: -dimensions.spacing.md,
+  },
+  errorText: {
+    fontSize: dimensions.fontSize.caption,
+    color: colors.error,
+    marginTop: dimensions.spacing.sm,
+    fontWeight: "500",
   },
   moodContainer: {
-    marginBottom: dimensions.spacing.lg,
+    marginTop: dimensions.spacing.lg,
   },
-  moodLabel: {
+  moodSubtitle: {
     fontSize: dimensions.fontSize.body,
-    fontWeight: "500",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.md,
-    
+    color: colors.textTertiary,
+    marginBottom: dimensions.spacing.lg,
   },
   moodSelector: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: dimensions.spacing.md,
-    padding:"30px"
+    gap: dimensions.spacing.sm,
+    marginBottom: dimensions.spacing.lg,
   },
   moodButton: {
     flex: 1,
-    alignItems: "center",
-    paddingVertical: dimensions.spacing.md,
-    marginHorizontal: dimensions.spacing.xs,
     borderRadius: dimensions.borderRadius.lg,
-    backgroundColor: colors.surfaceSecondary,
-    borderWidth: 2,
-    borderColor: "transparent",
-
+    overflow: "hidden",
   },
   moodButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    transform: [{ scale: 1.05 }],
+  },
+  moodButtonGradient: {
+    alignItems: "center",
+    paddingVertical: dimensions.spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   moodEmoji: {
-    fontSize: 24,
-    marginBottom: dimensions.spacing.xs,
+    fontSize: 28,
+    marginBottom: dimensions.spacing.sm,
   },
   moodNumber: {
-    fontSize: dimensions.fontSize.caption,
+    fontSize: dimensions.fontSize.body,
     fontWeight: "600",
     color: colors.textSecondary,
   },
   moodNumberActive: {
-    color: colors.surface,
+    color: colors.textPrimary,
   },
-  moodText: {
+  moodFeedback: {
+    backgroundColor: colors.surfaceSecondary,
+    padding: dimensions.spacing.md,
+    borderRadius: dimensions.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  moodFeedbackText: {
     fontSize: dimensions.fontSize.body,
     color: colors.textSecondary,
     textAlign: "center",
     fontWeight: "500",
   },
   notesInput: {
-    height: 120,
+    minHeight: 120,
     textAlignVertical: "top",
-    paddingTop: 28,
+    paddingTop: dimensions.spacing.lg,
   },
-  summaryCard: {
-    marginHorizontal: dimensions.spacing.lg,
-    marginTop: dimensions.spacing.lg,
-    padding: dimensions.spacing.xl,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  summaryTitle: {
-    fontSize: dimensions.fontSize.title,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.lg,
-    textAlign: "center",
-  },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  summaryItem: {
-    width: "48%",
-    alignItems: "center",
-    paddingVertical: dimensions.spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: dimensions.borderRadius.lg,
-    marginBottom: dimensions.spacing.md,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  summaryLabel: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.textSecondary,
-    marginBottom: dimensions.spacing.xs,
-    fontWeight: "500",
-  },
-  summaryValue: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    paddingHorizontal: dimensions.spacing.lg,
+  saveButtonContainer: {
+    paddingHorizontal: dimensions.layout.containerPadding,
     paddingTop: dimensions.spacing.xl,
-    gap: dimensions.spacing.md,
-  },
-  clearButton: {
-    flex: 1,
+    paddingBottom: dimensions.layout.screenPaddingBottom,
   },
   saveButton: {
-    flex: 2,
+    borderRadius: dimensions.borderRadius.xl,
+    overflow: "hidden",
+    ...dimensions.shadow.lg,
+    shadowColor: colors.shadowPrimary,
+    
   },
-  errorText: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.error,
-    marginTop: dimensions.spacing.sm,
-    marginLeft: dimensions.spacing.xs,
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonGradient: {
+    paddingVertical: dimensions.spacing.lg,
+  },
+  saveButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: dimensions.spacing.md,
+    paddingVertical: 20,
+    textAlign: "center",
+    marginBottom:20,
+    borderRadius: dimensions.borderRadius.md,
+  },
+  saveButtonText: {
+    // flex:1,
+    heigh:"100%",
+    fontSize: dimensions.fontSize.bodyLarge,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    textAlign: "center",
+    alignItems: "center",
+    justifyContent: "center",
   },
 })
 

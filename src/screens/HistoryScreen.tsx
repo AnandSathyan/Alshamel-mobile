@@ -1,16 +1,18 @@
 "use client"
-
 import type React from "react"
 import { useState } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import Ionicons from "react-native-vector-icons/Ionicons"
+import LinearGradient from 'react-native-linear-gradient';
 import { LineChart } from "react-native-chart-kit"
-import { Card } from "../components/common/Card"
+import { Icon } from "../components/common/Icon"
+import { ProfessionalCard } from "../components/common/ProfessionalCard"
+import { ProfessionalHeader } from "../components/common/ProfessionalHeader"
 import { useHealthData } from "../hooks/useHealthData"
 import { colors } from "../constants/colors"
 import { dimensions } from "../constants/dimensions"
 import type { ChartDataPoint } from "../types/health"
+import { SimpleBarChart } from "../components/common/SimpleBarChart"
 
 type MetricType = "steps" | "water" | "sleep" | "heartRate" | "weight" | "calories"
 
@@ -24,7 +26,6 @@ const HistoryScreen: React.FC = () => {
   const getChartData = (): ChartDataPoint[] => {
     if (!weeklyLogs) return []
 
-    // Create array for last 7 days
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date()
       date.setDate(date.getDate() - (6 - i))
@@ -47,40 +48,38 @@ const HistoryScreen: React.FC = () => {
 
   const getMetricConfig = (metric: MetricType) => {
     const configs = {
-      steps: { title: "Daily Steps", icon: "footsteps", color: colors.chartSteps, unit: "" },
-      water: { title: "Water Intake", icon: "water", color: colors.chartWater, unit: "L" },
-      sleep: { title: "Sleep Duration", icon: "bed", color: colors.chartSleep, unit: "h" },
-      heartRate: { title: "Heart Rate", icon: "heart", color: colors.chartHeartRate, unit: "BPM" },
-      weight: { title: "Weight", icon: "fitness", color: colors.chartWeight, unit: "kg" },
-      calories: { title: "Calories", icon: "flame", color: colors.chartCalories, unit: "kcal" },
+      steps: { title: "Daily Steps", icon: "footsteps", gradient: colors.gradientSuccess, unit: "" },
+      water: { title: "Water Intake", icon: "water", gradient: colors.gradientInfo, unit: "L" },
+      sleep: { title: "Sleep Duration", icon: "bed", gradient: colors.gradientPrimary, unit: "h" },
+      heartRate: { title: "Heart Rate", icon: "heart", gradient: ["#EF4444", "#F87171"], unit: "BPM" },
+      weight: { title: "Weight", icon: "fitness", gradient: colors.gradientWarning, unit: "kg" },
+      calories: { title: "Calories", icon: "flame", gradient: colors.gradientSecondary, unit: "kcal" },
     }
     return configs[metric]
   }
 
-  const calculateAverage = (data: ChartDataPoint[], metric: MetricType): number => {
-    if (data.length === 0) return 0
-    const sum = data.reduce((acc, item) => acc + item[metric], 0)
-    return sum / data.length
-  }
-
   const chartData = getChartData()
   const metricConfig = getMetricConfig(selectedMetric)
-  const average = calculateAverage(chartData, selectedMetric)
 
   const chartConfig = {
     backgroundColor: colors.surface,
     backgroundGradientFrom: colors.surface,
-    backgroundGradientTo: colors.surface,
+    backgroundGradientTo: colors.surfaceSecondary,
     decimalPlaces: selectedMetric === "steps" || selectedMetric === "calories" ? 0 : 1,
-    color: (opacity = 1) => metricConfig.color,
+    color: (opacity = 1) => metricConfig.gradient[0],
     labelColor: (opacity = 1) => colors.textSecondary,
     style: {
-      borderRadius: dimensions.borderRadius.md,
+      borderRadius: dimensions.borderRadius.lg,
     },
     propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: metricConfig.color,
+      r: "8",
+      strokeWidth: "3",
+      stroke: metricConfig.gradient[0],
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "",
+      stroke: colors.glassBorder,
+      strokeWidth: 1,
     },
   }
 
@@ -92,39 +91,49 @@ const HistoryScreen: React.FC = () => {
     datasets: [
       {
         data: chartData.map((item) => item[selectedMetric]),
-        color: (opacity = 1) => metricConfig.color,
-        strokeWidth: 2,
+        color: (opacity = 1) => metricConfig.gradient[0],
+        strokeWidth: 4,
       },
     ],
   }
 
+  const calculateAverage = (data: ChartDataPoint[], metric: MetricType): number => {
+    if (data.length === 0) return 0
+    const sum = data.reduce((acc, item) => acc + item[metric], 0)
+    return sum / data.length
+  }
+
   const MetricSelector: React.FC = () => {
-    const metrics: { key: MetricType; label: string; color: string }[] = [
-      { key: "steps", label: "Steps", color: colors.chartSteps },
-      { key: "water", label: "Water", color: colors.chartWater },
-      { key: "sleep", label: "Sleep", color: colors.chartSleep },
-      { key: "heartRate", label: "Heart", color: colors.chartHeartRate },
-      { key: "weight", label: "Weight", color: colors.chartWeight },
-      { key: "calories", label: "Calories", color: colors.chartCalories },
+    const metrics: { key: MetricType; label: string; gradient: string[] }[] = [
+      { key: "steps", label: "Steps", gradient: colors.gradientSuccess },
+      { key: "water", label: "Water", gradient: colors.gradientInfo },
+      { key: "sleep", label: "Sleep", gradient: colors.gradientPrimary },
+      { key: "heartRate", label: "Heart", gradient: ["#EF4444", "#F87171"] },
+      { key: "weight", label: "Weight", gradient: colors.gradientWarning },
+      { key: "calories", label: "Calories", gradient: colors.gradientSecondary },
     ]
 
     return (
       <View style={styles.metricSelector}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.metricScrollContent}
+        >
           {metrics.map((metric) => (
             <TouchableOpacity
               key={metric.key}
-              style={[
-                styles.metricButton,
-                selectedMetric === metric.key && {
-                  backgroundColor: metric.color,
-                },
-              ]}
               onPress={() => setSelectedMetric(metric.key)}
+              style={styles.metricButtonContainer}
             >
-              <Text style={[styles.metricButtonText, selectedMetric === metric.key && styles.metricButtonTextActive]}>
-                {metric.label}
-              </Text>
+              <LinearGradient
+                colors={selectedMetric === metric.key ? metric.gradient : [colors.surface, colors.surfaceSecondary]}
+                style={[styles.metricButton, selectedMetric === metric.key && styles.metricButtonActive]}
+              >
+                <Text style={[styles.metricButtonText, selectedMetric === metric.key && styles.metricButtonTextActive]}>
+                  {metric.label}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -132,95 +141,15 @@ const HistoryScreen: React.FC = () => {
     )
   }
 
-  const WeeklySummary: React.FC = () => {
-    const summaryData = [
-      {
-        title: "Avg Steps",
-        value: Math.round(calculateAverage(chartData, "steps")).toLocaleString(),
-        icon: "footsteps",
-        color: colors.chartSteps,
-      },
-      {
-        title: "Avg Water",
-        value: `${calculateAverage(chartData, "water").toFixed(1)}L`,
-        icon: "water",
-        color: colors.chartWater,
-      },
-      {
-        title: "Avg Sleep",
-        value: `${calculateAverage(chartData, "sleep").toFixed(1)}h`,
-        icon: "bed",
-        color: colors.chartSleep,
-      },
-      {
-        title: "Avg Heart Rate",
-        value: `${Math.round(calculateAverage(chartData, "heartRate"))} BPM`,
-        icon: "heart",
-        color: colors.chartHeartRate,
-      },
-    ]
-
-    return (
-      <Card>
-        <Text style={styles.sectionTitle}>📊 Weekly Summary</Text>
-        <View style={styles.summaryGrid}>
-          {summaryData.map((item, index) => (
-            <View key={index} style={[styles.summaryCard, { borderLeftColor: item.color }]}>
-              <View style={styles.summaryHeader}>
-                <Ionicons name={item.icon} size={20} color={item.color} />
-                <Text style={styles.summaryTitle}>{item.title}</Text>
-              </View>
-              <Text style={styles.summaryValue}>{item.value}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-    )
-  }
-
-  const DataList: React.FC<{ data: ChartDataPoint[] }> = ({ data }) => {
-    return (
-      <Card>
-        <Text style={styles.sectionTitle}>📅 7-Day History</Text>
-        {data.map((item, index) => {
-          const date = new Date(item.date)
-          const isToday = item.date === new Date().toISOString().split("T")[0]
-
-          return (
-            <View key={index} style={styles.dataRow}>
-              <View style={styles.dateContainer}>
-                <Text style={[styles.dayText, isToday && styles.todayText]}>
-                  {date.toLocaleDateString("en-US", { weekday: "short" })}
-                </Text>
-                <Text style={[styles.dateText, isToday && styles.todayText]}>{date.getDate()}</Text>
-              </View>
-              <View style={styles.metricsContainer}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Steps</Text>
-                  <Text style={styles.metricValue}>{item.steps.toLocaleString()}</Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Water</Text>
-                  <Text style={styles.metricValue}>{item.water.toFixed(1)}L</Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Sleep</Text>
-                  <Text style={styles.metricValue}>{item.sleep.toFixed(1)}h</Text>
-                </View>
-              </View>
-            </View>
-          )
-        })}
-      </Card>
-    )
-  }
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Ionicons name="bar-chart" size={48} color={colors.primary} />
-          <Text style={styles.loadingText}>Loading history...</Text>
+          <LinearGradient colors={colors.gradientPrimary} style={styles.loadingIcon}>
+            <Icon name="bar-chart" size={32} color={colors.textPrimary} />
+          </LinearGradient>
+          <Text style={styles.loadingText}>Loading your health history...</Text>
+          <Text style={styles.loadingSubtext}>Analyzing your progress</Text>
         </View>
       </SafeAreaView>
     )
@@ -229,50 +158,217 @@ const HistoryScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Health History</Text>
-          <Text style={styles.subtitle}>Your 7-day health metrics overview</Text>
+        {/* Professional Header */}
+        <ProfessionalHeader
+          title="Health Analytics"
+          subtitle="Track your wellness journey over time"
+          showNotifications={false}
+        />
+
+        {/* Activity Summary Cards */}
+        <View style={styles.activitySection}>
+          <Text style={styles.sectionTitle}>Today's Activities</Text>
+          <View style={styles.activityGrid}>
+            <ProfessionalCard gradient={["#84CC16", "#65A30D", "#4ADE80"]} style={styles.activityCard} glassEffect>
+              <View style={styles.activityContent}>
+                <View style={styles.activityHeader}>
+                  <Icon name="sunny" size={20} color={colors.textPrimary} />
+                  <Text style={styles.activityTitle}>Morning Walk</Text>
+                </View>
+                <View style={styles.activityBadge}>
+                  <Icon name="time" size={14} color={colors.textPrimary} />
+                  <Text style={styles.activityTime}>44m 22s</Text>
+                </View>
+              </View>
+            </ProfessionalCard>
+
+            <ProfessionalCard gradient={["#0EA5E9", "#0284C7", "#38BDF8"]} style={styles.activityCard} glassEffect>
+              <View style={styles.activityContent}>
+                <View style={styles.activityHeader}>
+                  <Icon name="moon" size={20} color={colors.textPrimary} />
+                  <Text style={styles.activityTitle}>Evening Walk</Text>
+                </View>
+                <View style={styles.activityBadge}>
+                  <Icon name="time" size={14} color={colors.textPrimary} />
+                  <Text style={styles.activityTime}>30m 45s</Text>
+                </View>
+              </View>
+            </ProfessionalCard>
+
+            <ProfessionalCard gradient={colors.gradientSuccess} style={styles.activityCardLarge} glassEffect>
+              <View style={styles.activityContent}>
+                <View style={styles.activityHeader}>
+                  <Icon name="fitness" size={24} color={colors.textPrimary} />
+                  <Text style={styles.activityTitleLarge}>Total Activity</Text>
+                </View>
+                <View style={styles.activityStats}>
+                  <Text style={styles.activityValue}>2h 15m 7s</Text>
+                  <Text style={styles.activitySubtitle}>Active time today</Text>
+                </View>
+              </View>
+            </ProfessionalCard>
+          </View>
+        </View>
+
+        {/* Progress Analytics */}
+        <View style={styles.progressSection}>
+          <Text style={styles.sectionTitle}>Progress Analytics</Text>
+          <View style={styles.progressGrid}>
+            <ProfessionalCard style={styles.progressCard} glassEffect elevation="lg">
+              <View style={styles.progressContent}>
+                <View style={styles.progressHeader}>
+                  <View style={[styles.progressDot, { backgroundColor: colors.success }]} />
+                  <Text style={styles.progressTitle}>Activity Level</Text>
+                </View>
+                <Text style={styles.progressSubtitle}>Your general goal achievements</Text>
+
+                <View style={styles.progressVisualization}>
+                  <View style={styles.progressCircle}>
+                    <LinearGradient colors={colors.gradientSuccess} style={styles.progressCircleGradient}>
+                      <Text style={styles.progressValue}>38%</Text>
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.progressDetails}>
+                    <Text style={styles.progressChange}>+ 5%</Text>
+                    <Text style={styles.progressChangeLabel}>vs last week</Text>
+                  </View>
+                </View>
+              </View>
+            </ProfessionalCard>
+
+            <ProfessionalCard style={styles.progressCard} glassEffect elevation="lg">
+              <View style={styles.progressContent}>
+                <View style={styles.progressHeader}>
+                  <View style={[styles.progressDot, { backgroundColor: colors.warning }]} />
+                  <Text style={styles.progressTitle}>Endurance</Text>
+                </View>
+                <Text style={styles.progressSubtitle}>Your endurance success rate</Text>
+
+                <View style={styles.progressVisualization}>
+                  <View style={styles.progressCircle}>
+                    <LinearGradient colors={colors.gradientWarning} style={styles.progressCircleGradient}>
+                      <Text style={styles.progressValue}>82%</Text>
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.progressDetails}>
+                    <Text style={styles.progressChange}>▲ 5%</Text>
+                    <Text style={styles.progressChangeLabel}>improvement</Text>
+                  </View>
+                </View>
+              </View>
+            </ProfessionalCard>
+          </View>
+        </View>
+
+        {/* Simple Bar Chart - Required by specs */}
+        <View style={styles.basicChartSection}>
+          <SimpleBarChart data={chartData} />
         </View>
 
         {/* Metric Selector */}
-        <MetricSelector />
+        <View style={styles.chartSection}>
+          <View style={styles.chartSectionHeader}>
+            <Text style={styles.sectionTitle}>Detailed Analytics</Text>
+            <Text style={styles.sectionSubtitle}>Select a metric to view trends</Text>
+          </View>
+          <MetricSelector />
+        </View>
 
-        {/* Chart */}
-        <Card style={styles.chartCard}>
+        {/* Professional Chart */}
+        <ProfessionalCard style={styles.chartCard} glassEffect elevation="xl" shadowColor={colors.shadowPrimary}>
           <View style={styles.chartHeader}>
             <View style={styles.chartTitleContainer}>
-              <Ionicons name={metricConfig.icon} size={24} color={metricConfig.color} />
-              <Text style={styles.chartTitle}>{metricConfig.title}</Text>
+              <View style={[styles.chartIcon, { backgroundColor: metricConfig.gradient[0] + "20" }]}>
+                <Icon name={metricConfig.icon} size={24} color={metricConfig.gradient[0]} />
+              </View>
+              <View style={styles.chartTitleText}>
+                <Text style={styles.chartTitle}>{metricConfig.title}</Text>
+                <Text style={styles.chartSubtitle}>7-day trend analysis</Text>
+              </View>
             </View>
-            <Text style={styles.averageText}>
-              7-day avg: {average.toFixed(selectedMetric === "steps" || selectedMetric === "calories" ? 0 : 1)}
-              {metricConfig.unit}
-            </Text>
+            <View style={styles.chartStats}>
+              <Text style={styles.chartAverage}>
+                {calculateAverage(chartData, selectedMetric).toFixed(
+                  selectedMetric === "steps" || selectedMetric === "calories" ? 0 : 1,
+                )}
+                {metricConfig.unit}
+              </Text>
+              <Text style={styles.chartAverageLabel}>avg</Text>
+            </View>
           </View>
 
           {chartData.length > 0 ? (
-            <LineChart
-              data={chartDataFormatted}
-              width={screenWidth - 64}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-            />
+            <View style={styles.chartContainer}>
+              <LineChart
+                data={chartDataFormatted}
+                width={screenWidth - 80}
+                height={240}
+                chartConfig={chartConfig}
+                bezier
+                style={styles.chart}
+                withHorizontalLabels={true}
+                withVerticalLabels={true}
+                withDots={true}
+                withShadow={false}
+                withInnerLines={true}
+                withOuterLines={false}
+              />
+            </View>
           ) : (
             <View style={styles.noDataContainer}>
-              <Ionicons name="bar-chart-outline" size={48} color={colors.textSecondary} />
-              <Text style={styles.noDataText}>No data available for the selected period</Text>
+              <LinearGradient colors={colors.gradientDark} style={styles.noDataIcon}>
+                <Icon name="bar-chart-outline" size={32} color={colors.textSecondary} />
+              </LinearGradient>
+              <Text style={styles.noDataText}>No data available</Text>
+              <Text style={styles.noDataSubtext}>Start logging your health metrics to see trends</Text>
             </View>
           )}
-        </Card>
+        </ProfessionalCard>
 
         {/* Weekly Summary */}
-        <WeeklySummary />
-
-        {/* Data List */}
-        <DataList data={chartData} />
+        <View style={styles.summarySection}>
+          <Text style={styles.sectionTitle}>Weekly Summary</Text>
+          <ProfessionalCard style={styles.summaryCard} glassEffect elevation="lg">
+            <View style={styles.summaryGrid}>
+              {[
+                {
+                  title: "Avg Steps",
+                  value: Math.round(calculateAverage(chartData, "steps")).toLocaleString(),
+                  icon: "footsteps",
+                  gradient: colors.gradientSuccess,
+                },
+                {
+                  title: "Avg Water",
+                  value: `${calculateAverage(chartData, "water").toFixed(1)}L`,
+                  icon: "water",
+                  gradient: colors.gradientInfo,
+                },
+                {
+                  title: "Avg Sleep",
+                  value: `${calculateAverage(chartData, "sleep").toFixed(1)}h`,
+                  icon: "bed",
+                  gradient: colors.gradientPrimary,
+                },
+                {
+                  title: "Avg Heart Rate",
+                  value: `${Math.round(calculateAverage(chartData, "heartRate"))} BPM`,
+                  icon: "heart",
+                  gradient: ["#EF4444", "#F87171"],
+                },
+              ].map((item, index) => (
+                <View key={index} style={styles.summaryItem}>
+                  <LinearGradient colors={item.gradient} style={styles.summaryItemGradient}>
+                    <Icon name={item.icon} size={20} color={colors.textPrimary} />
+                  </LinearGradient>
+                  <View style={styles.summaryItemContent}>
+                    <Text style={styles.summaryItemTitle}>{item.title}</Text>
+                    <Text style={styles.summaryItemValue}>{item.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ProfessionalCard>
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -290,161 +386,335 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: dimensions.layout.containerPadding,
+  },
+  loadingIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: dimensions.spacing.xl,
   },
   loadingText: {
+    fontSize: dimensions.fontSize.title,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: dimensions.spacing.sm,
+  },
+  loadingSubtext: {
     fontSize: dimensions.fontSize.body,
     color: colors.textSecondary,
-    marginTop: dimensions.spacing.md,
   },
-  header: {
-    padding: dimensions.spacing.lg,
-    paddingBottom: dimensions.spacing.md,
+  sectionTitle: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: dimensions.spacing.lg,
   },
-  title: {
-    fontSize: dimensions.fontSize.title,
+  sectionSubtitle: {
+    fontSize: dimensions.fontSize.body,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  activitySection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    paddingTop: dimensions.layout.screenPaddingTop,
+    marginBottom: dimensions.layout.sectionSpacing,
+  },
+  activityGrid: {
+    gap: dimensions.spacing.md,
+  },
+  activityCard: {
+    minHeight: 80,
+  },
+  activityCardLarge: {
+    minHeight: 120,
+  },
+  activityContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  activityHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: dimensions.fontSize.bodyLarge,
     fontWeight: "600",
     color: colors.textPrimary,
-    marginBottom: dimensions.spacing.xs,
+    marginLeft: dimensions.spacing.sm,
   },
-  subtitle: {
+  activityTitleLarge: {
+    fontSize: dimensions.fontSize.title,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginLeft: dimensions.spacing.sm,
+  },
+  activityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.glassStrong,
+    paddingHorizontal: dimensions.spacing.md,
+    paddingVertical: dimensions.spacing.sm,
+    borderRadius: dimensions.borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  activityTime: {
+    fontSize: dimensions.fontSize.caption,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginLeft: dimensions.spacing.xs,
+  },
+  activityStats: {
+    alignItems: "flex-end",
+  },
+  activityValue: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "800",
+    color: colors.textPrimary,
+  },
+  activitySubtitle: {
+    fontSize: dimensions.fontSize.caption,
+    color: colors.textSecondary,
+    marginTop: dimensions.spacing.xs,
+  },
+  progressSection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    marginBottom: dimensions.layout.sectionSpacing,
+  },
+  progressGrid: {
+    gap: dimensions.spacing.md,
+  },
+  progressCard: {
+    padding: dimensions.spacing.xl,
+  },
+  progressContent: {
+    alignItems: "flex-start",
+  },
+  progressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: dimensions.spacing.sm,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: dimensions.spacing.sm,
+  },
+  progressTitle: {
+    fontSize: dimensions.fontSize.bodyLarge,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  progressSubtitle: {
     fontSize: dimensions.fontSize.body,
     color: colors.textSecondary,
+    marginBottom: dimensions.spacing.xl,
+  },
+  progressVisualization: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  progressCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: dimensions.spacing.lg,
+  },
+  progressCircleGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: colors.glassBorder,
+  },
+  progressValue: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "800",
+    color: colors.textPrimary,
+  },
+  progressDetails: {
+    flex: 1,
+  },
+  progressChange: {
+    fontSize: dimensions.fontSize.bodyLarge,
+    fontWeight: "700",
+    color: colors.success,
+    marginBottom: dimensions.spacing.xs,
+  },
+  progressChangeLabel: {
+    fontSize: dimensions.fontSize.caption,
+    color: colors.textSecondary,
+  },
+  chartSection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    marginBottom: dimensions.spacing.xl,
+  },
+  chartSectionHeader: {
+    marginBottom: dimensions.spacing.lg,
   },
   metricSelector: {
-    marginHorizontal: dimensions.spacing.lg,
-    marginBottom: dimensions.spacing.md,
+    marginBottom: dimensions.spacing.xl,
+  },
+  metricScrollContent: {
+    paddingRight: dimensions.spacing.lg,
+  },
+  metricButtonContainer: {
+    marginRight: dimensions.spacing.sm,
   },
   metricButton: {
-    paddingVertical: dimensions.spacing.sm,
-    paddingHorizontal: dimensions.spacing.md,
+    paddingVertical: dimensions.spacing.md,
+    paddingHorizontal: dimensions.spacing.lg,
     borderRadius: dimensions.borderRadius.full,
-    backgroundColor: colors.surfaceSecondary,
-    marginRight: dimensions.spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding:80
+  },
+  metricButtonActive: {
+    transform: [{ scale: 1.05 }],
+    ...dimensions.shadow.md,
   },
   metricButtonText: {
     fontSize: dimensions.fontSize.body,
-    fontWeight: "500",
+    fontWeight: "600",
     color: colors.textSecondary,
   },
   metricButtonTextActive: {
-    color: colors.surface,
+    color: colors.textPrimary,
   },
   chartCard: {
-    marginHorizontal: dimensions.spacing.lg,
-    marginBottom: dimensions.spacing.md,
+    marginHorizontal: dimensions.layout.containerPadding,
+    marginBottom: dimensions.layout.sectionSpacing,
+    padding: dimensions.spacing.xl,
   },
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: dimensions.spacing.md,
+    marginBottom: dimensions.spacing.xl,
   },
   chartTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+  },
+  chartIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: dimensions.spacing.md,
+  },
+  chartTitleText: {
+    flex: 1,
   },
   chartTitle: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "600",
+    fontSize: dimensions.fontSize.title,
+    fontWeight: "700",
     color: colors.textPrimary,
-    marginLeft: dimensions.spacing.sm,
+    marginBottom: dimensions.spacing.xs,
   },
-  averageText: {
-    fontSize: dimensions.fontSize.caption,
+  chartSubtitle: {
+    fontSize: dimensions.fontSize.body,
     color: colors.textSecondary,
   },
+  chartStats: {
+    alignItems: "flex-end",
+  },
+  chartAverage: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "800",
+    color: colors.textPrimary,
+  },
+  chartAverageLabel: {
+    fontSize: dimensions.fontSize.caption,
+    color: colors.textSecondary,
+    marginTop: dimensions.spacing.xs,
+  },
+  chartContainer: {
+    alignItems: "center",
+    borderRadius: dimensions.borderRadius.lg,
+    overflow: "hidden",
+  },
   chart: {
-    marginVertical: dimensions.spacing.sm,
-    borderRadius: dimensions.borderRadius.md,
+    borderRadius: dimensions.borderRadius.lg,
   },
   noDataContainer: {
-    height: 220,
+    height: 240,
     justifyContent: "center",
     alignItems: "center",
   },
+  noDataIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: dimensions.spacing.lg,
+  },
   noDataText: {
-    fontSize: dimensions.fontSize.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginTop: dimensions.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: dimensions.fontSize.body,
+    fontSize: dimensions.fontSize.bodyLarge,
     fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: dimensions.spacing.md,
+    color: colors.textSecondary,
+    marginBottom: dimensions.spacing.sm,
   },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+  noDataSubtext: {
+    fontSize: dimensions.fontSize.body,
+    color: colors.textTertiary,
+    textAlign: "center",
+  },
+  summarySection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    paddingBottom: dimensions.layout.scrollBottomPadding,
   },
   summaryCard: {
-    width: "48%",
+    padding: dimensions.spacing.xl,
+  },
+  summaryGrid: {
+    gap: dimensions.spacing.lg,
+  },
+  summaryItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: dimensions.spacing.lg,
     backgroundColor: colors.surfaceSecondary,
-    borderRadius: dimensions.borderRadius.md,
-    padding: dimensions.spacing.md,
-    marginBottom: dimensions.spacing.sm,
-    borderLeftWidth: 4,
+    borderRadius: dimensions.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
-  summaryHeader: {
-    flexDirection: "row",
+  summaryItemGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
-    marginBottom: dimensions.spacing.xs,
-  },
-  summaryTitle: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.textSecondary,
-    marginLeft: dimensions.spacing.xs,
-  },
-  summaryValue: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  dataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: dimensions.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  dateContainer: {
-    width: 60,
-    alignItems: "center",
+    justifyContent: "center",
     marginRight: dimensions.spacing.lg,
   },
-  dayText: {
-    fontSize: dimensions.fontSize.caption,
-    color: colors.textSecondary,
-    fontWeight: "500",
+  summaryItemContent: {
+    flex: 1,
   },
-  dateText: {
+  summaryItemTitle: {
     fontSize: dimensions.fontSize.body,
-    color: colors.textPrimary,
-    fontWeight: "600",
-  },
-  todayText: {
-    color: colors.primary,
-  },
-  metricsContainer: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  metricLabel: {
-    fontSize: dimensions.fontSize.caption,
     color: colors.textSecondary,
     marginBottom: dimensions.spacing.xs,
   },
-  metricValue: {
-    fontSize: dimensions.fontSize.body,
-    fontWeight: "600",
+  summaryItemValue: {
+    fontSize: dimensions.fontSize.titleLarge,
+    fontWeight: "700",
     color: colors.textPrimary,
+  },
+  basicChartSection: {
+    paddingHorizontal: dimensions.layout.containerPadding,
+    marginBottom: dimensions.layout.sectionSpacing,
   },
 })
 
